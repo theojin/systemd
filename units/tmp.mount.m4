@@ -19,4 +19,4 @@ After=swap.target
 What=tmpfs
 Where=/tmp
 Type=tmpfs
-Options=mode=1777,strictatime,nosuid,nodev
+Options=mode=1777,strictatime,smackfsroot=*,nosuid,nodev
