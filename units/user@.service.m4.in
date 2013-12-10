@@ -14,8 +14,11 @@ User=%i
 PAMName=systemd-user
 Type=notify
 ExecStart=-@rootlibexecdir@/systemd --user
+SmackProcessLabel=User
 Slice=user-%i.slice
 KillMode=mixed
 Delegate=yes
 TasksMax=infinity
 TimeoutStopSec=120s
+Capabilities=cap_mac_admin,cap_mac_override,cap_setgid=i
+SecureBits=keep-caps
