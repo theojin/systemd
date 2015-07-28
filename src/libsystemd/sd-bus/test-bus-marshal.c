@@ -168,6 +168,9 @@ int main(int argc, char *argv[]) {
         r = sd_bus_message_append(m, "()");
         assert_se(r >= 0);
 
+        r = sd_bus_message_append(m, "()");
+        assert_se(r >= 0);
+
         r = sd_bus_message_append(m, "ba(ss)", 255, 3, "aaa", "1", "bbb", "2", "ccc", "3");
         assert_se(r >= 0);
 
