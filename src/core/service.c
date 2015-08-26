@@ -1231,6 +1231,18 @@ static int service_spawn(
         assert(c);
         assert(_pid);
 
+        /* TODO workaround code */
+        if (UNIT(s)->cgroup_realized) {
+                _cleanup_free_ char *path = NULL;
+                path = unit_default_cgroup_path(UNIT(s));
+
+                if (cg_check_cgroup_exist(path) < 0) {
+                        log_unit_error(UNIT(s)->id, "CGROUP ERROR! (%s) is already realized but not exists", UNIT(s)->id);
+                        UNIT(s)->cgroup_realized = false;
+                        UNIT(s)->cgroup_realized_mask = 0;
+                }
+        }
+
         if (flags & EXEC_IS_CONTROL) {
                 /* If this is a control process, mask the permissions/chroot application if this is requested. */
                 if (s->permissions_start_only)
