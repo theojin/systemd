@@ -1174,11 +1174,20 @@ static int service_spawn(
         assert(c);
         assert(_pid);
 
-        (void) unit_realize_cgroup(UNIT(s));
-        if (s->reset_cpu_usage) {
-                (void) unit_reset_cpu_usage(UNIT(s));
-                s->reset_cpu_usage = false;
+
+        /* TODO workaround code */
+        if (UNIT(s)->cgroup_realized) {
+                _cleanup_free_ char *path = NULL;
+                path = unit_default_cgroup_path(UNIT(s));
+
+                if (cg_check_cgroup_exist(path) < 0) {
+                        log_unit_error(UNIT(s)->id, "CGROUP ERROR! (%s) is already realized but not exists", UNIT(s)->id);
+                        UNIT(s)->cgroup_realized = false;
+                        UNIT(s)->cgroup_realized_mask = 0;
+                }
         }
+
+        unit_realize_cgroup(UNIT(s));
 
         r = unit_setup_exec_runtime(UNIT(s));
         if (r < 0)

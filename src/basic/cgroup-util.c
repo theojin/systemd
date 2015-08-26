@@ -2363,3 +2363,15 @@ static const char *cgroup_controller_table[_CGROUP_CONTROLLER_MAX] = {
 };
 
 DEFINE_STRING_TABLE_LOOKUP(cgroup_controller, CGroupController);
+
+int cg_check_cgroup_exist(const char *p) {
+        const char *cc;
+        assert(p);
+
+        cc = strjoina("/sys/fs/cgroup/systemd", p);
+        if (laccess(cc, F_OK) < 0) {
+                return -errno;
+        }
+
+        return 0;
+}
