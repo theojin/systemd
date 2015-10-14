@@ -19,4 +19,6 @@ After=swap.target
 What=tmpfs
 Where=/tmp
 Type=tmpfs
-Options=mode=1777,strictatime,nosuid,nodev
+m4_ifdef(`HAVE_SMACK',
+`Options=mode=1777,strictatime,smackfsroot=*',
+`Options=mode=1777,strictatime')
