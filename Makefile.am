@@ -255,10 +255,12 @@ define move-to-rootlibdir
 		$(MKDIR_P) $(DESTDIR)$(rootlibdir) && \
 		so_img_name=$$(readlink $(DESTDIR)$(libdir)/$$libname) && \
 		rm -f $(DESTDIR)$(libdir)/$$libname && \
-		$(LN_S) --relative -f $(DESTDIR)$(rootlibdir)/$$so_img_name $(DESTDIR)$(libdir)/$$libname && \
+		cd $(DESTDIR); $(LN_S) -f ./$(rootlibdir)/$$so_img_name ./$(libdir)/$$libname && \
 		mv $(DESTDIR)$(libdir)/$$libname.* $(DESTDIR)$(rootlibdir); \
 	fi
 endef
+
+
 
 INSTALL_DIRS =
 
@@ -329,7 +331,7 @@ define install-relative-aliases
 	while [ -n "$$1" ]; do \
 		$(MKDIR_P) `dirname $(DESTDIR)$$dir/$$2` && \
 		rm -f $(DESTDIR)$$dir/$$2 && \
-		$(LN_S) --relative $(DESTDIR)$$1 $(DESTDIR)$$dir/$$2 && \
+		cd $(DESTDIR); $(LN_S) ./$$1 ./$$dir/$$2 && \
 		shift 2 || exit $$?; \
 	done
 endef
@@ -2960,6 +2962,25 @@ systemd_gpt_auto_generator_CFLAGS = \
 endif
 
 # ------------------------------------------------------------------------------
+systemgenerator_PROGRAMS +=  \
+	systemd-dbus1-generator
+
+systemd_dbus1_generator_SOURCES = \
+	src/dbus1-generator/dbus1-generator.c
+
+systemd_dbus1_generator_LDADD = \
+	libsystemd-label.la \
+	libsystemd-internal.la \
+	libsystemd-shared.la
+
+dbus1-generator-install-hook:
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(usergeneratordir)
+	$(AM_V_RM)rm -f $(DESTDIR)$(usergeneratordir)/systemd-dbus1-generator
+	cd $(DESTDIR); $(AM_V_LN)$(LN_S) -f ./$(systemgeneratordir)/systemd-dbus1-generator ./$(usergeneratordir)/systemd-dbus1-generator
+
+dbus1-generator-uninstall-hook:
+	rm -f $(DESTDIR)$(usergeneratordir)/systemd-dbus1-generator
+
 dist_xinitrc_SCRIPTS = \
 	xorg/50-systemd-user.sh
 
