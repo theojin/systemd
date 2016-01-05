@@ -255,7 +255,7 @@ define move-to-rootlibdir
 		$(MKDIR_P) $(DESTDIR)$(rootlibdir) && \
 		so_img_name=$$(readlink $(DESTDIR)$(libdir)/$$libname) && \
 		rm -f $(DESTDIR)$(libdir)/$$libname && \
-		$(LN_S) --relative -f $(DESTDIR)$(rootlibdir)/$$so_img_name $(DESTDIR)$(libdir)/$$libname && \
+		cd $(DESTDIR); $(LN_S) -f ./$(rootlibdir)/$$so_img_name ./$(libdir)/$$libname && \
 		mv $(DESTDIR)$(libdir)/$$libname.* $(DESTDIR)$(rootlibdir); \
 	fi
 endef
@@ -329,7 +329,7 @@ define install-relative-aliases
 	while [ -n "$$1" ]; do \
 		$(MKDIR_P) `dirname $(DESTDIR)$$dir/$$2` && \
 		rm -f $(DESTDIR)$$dir/$$2 && \
-		$(LN_S) --relative $(DESTDIR)$$1 $(DESTDIR)$$dir/$$2 && \
+		cd $(DESTDIR); $(LN_S) ./$$1 ./$$dir/$$2 && \
 		shift 2 || exit $$?; \
 	done
 endef
