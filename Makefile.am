@@ -313,8 +313,9 @@ install-directories-hook:
 	$(MKDIR_P) $(addprefix $(DESTDIR),$(INSTALL_DIRS))
 
 install-environment-conf-hook: install-directories-hook
-	$(AM_V_LN)$(LN_S) --relative -f $(DESTDIR)$(sysconfdir)/environment \
-		$(DESTDIR)$(environmentdir)/99-environment.conf
+	$(AM_V_LN)cd $(DESTDIR) &&
+	$(LN_S) -f ./$(sysconfdir)/environment \
+		./$(environmentdir)/99-environment.conf
 
 install-aliases-hook:
 	set -- $(SYSTEM_UNIT_ALIASES) && \
@@ -337,7 +338,7 @@ define install-relative-aliases
 	while [ -n "$$1" ]; do \
 		$(MKDIR_P) `dirname $(DESTDIR)$$dir/$$2` && \
 		rm -f $(DESTDIR)$$dir/$$2 && \
-		$(LN_S) --relative $(DESTDIR)$$1 $(DESTDIR)$$dir/$$2 && \
+		cd $(DESTDIR); $(LN_S) ./$$1 ./$$dir/$$2 && \
 		shift 2 || exit $$?; \
 	done
 endef
