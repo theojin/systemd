@@ -21,4 +21,5 @@ Delegate=yes
 TasksMax=infinity
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/dbus/user_bus_socket
 Capabilities=cap_mac_admin,cap_mac_override,cap_setgid=i
+SupplementaryGroups=priv_mediastorage priv_externalstorage priv_message_read priv_mapservice priv_network_get priv_internet
 SecureBits=keep-caps
