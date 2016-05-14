@@ -1124,19 +1124,76 @@ static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compar
 
 }
 
-static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus *bus)) {
+static int prepare_connection(sd_bus *bus, char *argv[])
+{
+        int r;
+        uint32_t flags = 0;
+        char **i;
+        _cleanup_(sd_bus_message_unrefp) sd_bus_message *message = NULL;
+        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+
+        /* upgrade connection; it's not used for anything else after this call */
+        r = sd_bus_message_new_method_call(bus, &message, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus.Monitoring", "BecomeMonitor");
+        if (r < 0)
+                return bus_log_create_error(r);
+
+        r = sd_bus_message_open_container(message, 'a', "s");
+        if (r < 0)
+                return bus_log_create_error(r);
+
+        STRV_FOREACH(i, argv+1) {
+                _cleanup_free_ char *m = NULL;
+                if (!service_name_is_valid(*i)) {
+                        log_error("Invalid service name '%s'", *i);
+                        return -EINVAL;
+                }
+
+                m = strjoin("sender='", *i, "'", NULL);
+                if (!m)
+                        return log_oom();
+
+                r = sd_bus_message_append_basic(message, 's', m);
+                if (r < 0)
+                        return bus_log_create_error(r);
+
+                free(m);
+                m = strjoin("destination='", *i, "'", NULL);
+                if (!m)
+                        return log_oom();
+
+                r = sd_bus_message_append_basic(message, 's', m);
+                if (r < 0)
+                        return bus_log_create_error(r);
+        }
+
+        STRV_FOREACH(i, arg_matches) {
+                r = sd_bus_message_append_basic(message, 's', *i);
+                if (r < 0)
+                        return bus_log_create_error(r);
+        }
+
+        r = sd_bus_message_close_container(message);
+        if (r < 0)
+                return bus_log_create_error(r);
+
+        r = sd_bus_message_append_basic(message, 'u', &flags);
+        if (r < 0)
+                return bus_log_create_error(r);
+
+        r = sd_bus_call(bus, message, arg_timeout, &error, NULL);
+        if (r < 0) {
+                log_error("%s", bus_error_message(&error, r));
+                return r;
+        }
+
+        return 0;
+}
+
+static int prepare_connection_kernel(sd_bus *bus, char *argv[])
+{
+        int r;
         bool added_something = false;
         char **i;
-        int r;
-        bool receiver_pid_match;
-        bool sender_pid_match;
-        sd_bus_creds *creds = NULL;
-        _cleanup_hashmap_free_ Hashmap *hashmap_pids = NULL;
-        _cleanup_hashmap_free_ Hashmap *hashmap_names = NULL;
-        _cleanup_strv_free_ char **acquired = NULL, **activatable = NULL;
-
-        hashmap_pids = hashmap_new(&string_hash_ops);
-        hashmap_names = hashmap_new(&string_hash_ops);
 
         STRV_FOREACH(i, argv+1) {
                 _cleanup_free_ char *m = NULL;
@@ -1178,6 +1235,28 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
                 if (r < 0)
                         return log_error_errno(r, "Failed to add match: %m");
         }
+        return 0;
+}
+
+static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus *bus)) {
+        int r;
+        bool receiver_pid_match;
+        bool sender_pid_match;
+
+        _cleanup_hashmap_free_ Hashmap *hashmap_pids = NULL;
+        _cleanup_hashmap_free_ Hashmap *hashmap_names = NULL;
+        _cleanup_strv_free_ char **acquired = NULL, **activatable = NULL;
+
+        hashmap_pids = hashmap_new(&string_hash_ops);
+        hashmap_names = hashmap_new(&string_hash_ops);
+
+        if (bus->is_kernel)
+            r = prepare_connection_kernel(bus, argv);
+        else
+            r = prepare_connection(bus, argv);
+
+        if (r != 0)
+            return r;
 
         while (monitor_run_condi) {
                 receiver_pid_match = true;
