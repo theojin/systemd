@@ -1097,6 +1097,7 @@ static int setup_pam(
 
         parent_pid = getpid();
 
+#ifdef HAVE_LOGIND
         pam_pid = fork();
         if (pam_pid < 0) {
                 r = -errno;
@@ -1183,6 +1184,7 @@ static int setup_pam(
                 pam_end(handle, pam_code | flags);
                 _exit(ret);
         }
+#endif // HAVE_LOGIND
 
         barrier_set_role(&barrier, BARRIER_PARENT);
 
