@@ -5917,8 +5917,16 @@ dist_udevrules_DATA += \
 nodist_udevrules_DATA += \
 	src/login/71-seat.rules \
 	src/login/73-seat-late.rules
-
+else
+MULTI_USER_TARGET_WANTS += \
+	user@5001.service
 endif
+
+dist_systemunit_DATA += \
+	units/run-user-5001.mount
+
+SYSINIT_TARGET_WANTS += \
+	run-user-5001.mount
 
 polkitpolicy_in_files += \
 	src/login/org.freedesktop.login1.policy.in
