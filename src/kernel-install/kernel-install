@@ -20,6 +20,7 @@
 # along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
 SKIP_REMAINING=77
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 usage()
 {
