@@ -20,6 +20,6 @@ KillMode=mixed
 Delegate=yes
 TasksMax=infinity
 TimeoutStopSec=120s
-Capabilities=cap_mac_admin,cap_mac_override,cap_setgid=i
+Capabilities=cap_sys_admin,cap_mac_admin,cap_mac_override,cap_setgid=i
 SupplementaryGroups=priv_mediastorage priv_externalstorage priv_message_read priv_mapservice priv_network_get priv_internet
 SecureBits=keep-caps
