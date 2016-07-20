@@ -27,6 +27,7 @@ CapabilityBoundingSet=CAP_SYS_ADMIN CAP_MAC_ADMIN CAP_AUDIT_CONTROL CAP_CHOWN CA
 WatchdogSec=3min
 MemoryDenyWriteExecute=yes
 SystemCallFilter=~@clock @cpu-emulation @debug @keyring @module @obsolete @raw-io
+SmackProcessLabel=System::Privileged
 
 # Increase the default a bit in order to allow many simultaneous
 # logins since we keep one fd open per session.

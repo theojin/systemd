@@ -25,3 +25,4 @@ MountFlags=slave
 KillMode=mixed
 WatchdogSec=3min
 TasksMax=infinity
+SmackProcessLabel=System::Privileged
