@@ -15,3 +15,4 @@ ConditionPathExists=/dev/tty0
 [Service]
 Type=oneshot
 ExecStart=@rootlibexecdir@/systemd-vconsole-setup
+SmackProcessLabel=System
