@@ -25,3 +25,4 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=@rootlibexecdir@/systemd-binfmt
 TimeoutSec=90s
+SmackProcessLabel=System

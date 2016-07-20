@@ -20,3 +20,4 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=@rootbindir@/systemd-machine-id-setup --commit
 TimeoutSec=30s
+SmackProcessLabel=System

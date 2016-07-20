@@ -19,6 +19,7 @@ CapabilityBoundingSet=CAP_KILL CAP_SYS_PTRACE CAP_SYS_ADMIN CAP_SETGID CAP_SYS_C
 WatchdogSec=3min
 MemoryDenyWriteExecute=yes
 SystemCallFilter=~@clock @cpu-emulation @debug @keyring @module @obsolete @raw-io
+SmackProcessLabel=System
 
 # Note that machined cannot be placed in a mount namespace, since it
 # needs access to the host's mount namespace in order to implement the
