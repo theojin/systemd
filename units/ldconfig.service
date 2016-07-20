@@ -19,3 +19,4 @@ ConditionFileNotEmpty=|!/etc/ld.so.cache
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/sbin/ldconfig -X
+SmackProcessLabel=System

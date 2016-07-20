@@ -22,3 +22,4 @@ ProtectSystem=yes
 ProtectHome=yes
 MemoryDenyWriteExecute=yes
 SystemCallFilter=~@clock @cpu-emulation @debug @keyring @module @mount @obsolete @raw-io
+SmackProcessLabel=System

@@ -25,3 +25,4 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=@rootlibexecdir@/systemd-modules-load
 TimeoutSec=90s
+SmackProcessLabel=System
