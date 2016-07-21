@@ -1248,7 +1248,7 @@ static int usbffs_dispatch_eps(SocketPort *p) {
         for (i = 0; i < n; ++i) {
                 _cleanup_free_ char *ep = NULL;
 
-                ep = path_make_absolute(ent[i]->d_name, path);
+                ep = path_make_absolute(ent[i]->d_name, p->path);
                 if (!ep)
                         return -ENOMEM;
 
