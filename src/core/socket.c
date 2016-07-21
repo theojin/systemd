@@ -1194,11 +1194,7 @@ static int ffs_dispatch_eps(SocketPort *p) {
         int r, i, n, k;
         _cleanup_free_ char *path = NULL;
 
-        r = path_get_parent(p->path, &path);
-        if (r < 0)
-                return r;
-
-        r = scandir(path, &ent, select_ep, alphasort);
+        r = scandir(p->path, &ent, select_ep, alphasort);
         if (r < 0)
                 return -errno;
 
@@ -1213,7 +1209,7 @@ static int ffs_dispatch_eps(SocketPort *p) {
         for (i = 0; i < n; ++i) {
                 _cleanup_free_ char *ep = NULL;
 
-                ep = path_make_absolute(ent[i]->d_name, path);
+                ep = path_make_absolute(ent[i]->d_name, p->path);
                 if (!ep)
                         return -ENOMEM;
 
