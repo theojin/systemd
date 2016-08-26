@@ -279,8 +279,10 @@ int machine_load(Machine *m) {
                         m->class = c;
         }
 
-        deserialize_timestamp_value(realtime, &m->timestamp.realtime);
-        deserialize_timestamp_value(monotonic, &m->timestamp.monotonic);
+        if (realtime)
+                timestamp_deserialize(realtime, &m->timestamp.realtime);
+        if (monotonic)
+                timestamp_deserialize(monotonic, &m->timestamp.monotonic);
 
         if (netif) {
                 size_t l, allocated = 0, nr = 0;
