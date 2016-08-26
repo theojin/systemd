@@ -518,15 +518,14 @@ int timestamp_deserialize(const char *value, usec_t *timestamp) {
         return r;
 }
 
-int deserialize_timestamp_value(const char *value, usec_t *timestamp) {
+int timestamp_deserialize(const char *value, usec_t *timestamp) {
         int r;
 
         assert(value);
 
         r = safe_atou64(value, timestamp);
-
         if (r < 0)
-                return log_debug_errno(r, "Failed to parse finish timestamp value \"%s\": %m", value);
+                return log_debug_errno(r, "Failed to parse timestamp value \"%s\": %m", value);
 
         return r;
 }
