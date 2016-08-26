@@ -2323,7 +2323,7 @@ static int socket_deserialize_item(Unit *u, const char *key, const char *value, 
                 SocketPort *p;
 
                 if (sscanf(value, "%i %n", &fd, &skip) < 1 || fd < 0 || !fdset_contains(fds, fd))
-                        log_unit_debug(u, "Failed to parse ffs value: %s", value);
+                        log_unit_debug(u->id, "Failed to parse ffs value: %s", value);
                 else {
 
                         LIST_FOREACH(port, p, s->ports)
