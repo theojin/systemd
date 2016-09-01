@@ -260,6 +260,8 @@ static void service_reset_watchdog(Service *s) {
 static void service_reset_watchdog_timeout(Service *s, usec_t watchdog_override_usec) {
         assert(s);
 
+        // If there are no previous watchdog stop, USEC_INFINITY (disable) will not be set.
+        service_stop_watchdog(s);
         s->watchdog_override_enable = true;
         s->watchdog_override_usec = watchdog_override_usec;
         service_reset_watchdog(s);
