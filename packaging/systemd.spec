@@ -275,6 +275,11 @@ rm -f %{buildroot}/%{_sysconfdir}/X11/xinit/xinitrc.d/50-systemd-user.sh
 rm -f %{buildroot}/%{_prefix}/lib/systemd/user/busnames.target
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/user-generators/systemd-dbus1-generator
+%else
+rm -Rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-bus-proxyd.socket
+rm -Rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-bus-proxyd.service
+rm -Rf %{buildroot}/%{_prefix}/lib/systemd/user/systemd-bus-proxyd.socket
+rm -Rf %{buildroot}/%{_prefix}/lib/systemd/user/systemd-bus-proxyd.service
 %endif
 
 # Move macros to the proper location for Tizen
@@ -487,8 +492,6 @@ fi
 %{_prefix}/lib/systemd/user/default.target.wants/user-session-startup.service
 %if %{with kdbus}
 %{_prefix}/lib/systemd/user/busnames.target
-%{_prefix}/lib/systemd/user/systemd-bus-proxyd.socket
-%{_prefix}/lib/systemd/user/systemd-bus-proxyd.service
 %endif
 %exclude %{_prefix}/lib/systemd/network/80-container-ve.network
 %exclude %{_prefix}/lib/systemd/network/80-container-host0.network
