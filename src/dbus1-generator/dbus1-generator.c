@@ -261,21 +261,13 @@ static int link_busnames_target(const char *units) {
 }
 
 static int link_compatibility(const char *units) {
-        const char *f, *t;
-
-        f = strjoina(units, "/systemd-bus-proxyd.socket");
-        t = strjoina(arg_dest, "/" SPECIAL_DBUS_SOCKET);
-        mkdir_parents_label(t, 0755);
-        if (symlink(f, t) < 0)
-                return log_error_errno(errno, "Failed to create symlink %s: %m", t);
-
-        f = strjoina(units, "/systemd-bus-proxyd.socket");
-        t = strjoina(arg_dest, "/" SPECIAL_SOCKETS_TARGET ".wants/systemd-bus-proxyd.socket");
-        mkdir_parents_label(t, 0755);
-        if (symlink(f, t) < 0)
-                return log_error_errno(errno, "Failed to create symlink %s: %m", t);
+        const char *t;
 
         t = strjoina(arg_dest, "/" SPECIAL_DBUS_SERVICE);
+        if (symlink("/dev/null", t) < 0)
+                return log_error_errno(errno, "Failed to mask %s: %m", t);
+
+        t = strjoina(arg_dest, "/" SPECIAL_DBUS_SOCKET);
         if (symlink("/dev/null", t) < 0)
                 return log_error_errno(errno, "Failed to mask %s: %m", t);
 
