@@ -1,11 +1,8 @@
 %bcond_with kdbus
-%define release_flags %{?with_kdbus:+kdbus}
 
 # "enable foo" will turn into --enable-foo or --disable-foo
 # depending "with_foo" macro
 %define enable() %{expand:%%{?with_%{1}:--enable-%{1}}%%{!?with_%{1}:--disable-%{1}}}
-
-%define release_flags %{?with_kdbus:+kdbus}
 
 %define WITH_RANDOMSEED 0
 %define WITH_BASH_COMPLETION 0
