@@ -29,6 +29,7 @@ Source0:        http://www.freedesktop.org/software/systemd/%{name}-%{version}.t
 Source1:        pamconsole-tmp.conf
 Source2:        %{name}-rpmlintrc
 Source1001:     systemd.manifest
+Source3:        systemd_upgrade.sh
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
 BuildRequires:  libacl-devel
@@ -287,6 +288,10 @@ rm -rf %{buildroot}/%{_datadir}/zsh/site-functions/*
 
 mkdir -p %{buildroot}/%{_localstatedir}/log/journal
 
+# Upgrade script from 2.4 to 3.0
+install -m 755 -d %{buildroot}%{_datadir}/upgrade/scripts
+install -m 755 %{SOURCE3} %{buildroot}%{_datadir}/upgrade/scripts
+
 # end of install
 %pre
 /usr/bin/getent group cdrom >/dev/null 2>&1 || /usr/sbin/groupadd -r -g 11 cdrom >/dev/null 2>&1 || :
@@ -525,6 +530,9 @@ fi
 %{_datadir}/factory/etc/pam.d/system-auth
 
 %{_localstatedir}/log/journal
+
+%dir %{_datadir}/upgrade/scripts
+%{_datadir}/upgrade/scripts/systemd_upgrade.sh
 
 # Make sure we don't remove runlevel targets from F14 alpha installs,
 # but make sure we don't create then anew.
