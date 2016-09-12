@@ -149,6 +149,7 @@ cp %{SOURCE1001} .
         --disable-hwdb \
         --disable-sysusers \
         --disable-firstboot \
+        --disable-polkit \
         --disable-timesyncd \
         --disable-resolved \
         --disable-networkd \
@@ -518,20 +519,6 @@ fi
 %endif
 %if %{?WITH_MACHINED}
 %{_datadir}/dbus-1/system-services/org.freedesktop.machine1.service
-%endif
-%dir %{_datadir}/polkit-1
-%dir %{_datadir}/polkit-1/actions
-%{_datadir}/polkit-1/actions/org.freedesktop.systemd1.policy
-%{_datadir}/polkit-1/actions/org.freedesktop.hostname1.policy
-%if %{?with_multiuser}
-%{_datadir}/polkit-1/actions/org.freedesktop.login1.policy
-%endif
-%{_datadir}/polkit-1/actions/org.freedesktop.locale1.policy
-%if %{?WITH_TIMEDATED}
-%{_datadir}/polkit-1/actions/org.freedesktop.timedate1.policy
-%endif
-%if %{?WITH_MACHINED}
-%{_datadir}/polkit-1/actions/org.freedesktop.machine1.policy
 %endif
 %dir %{_datadir}/factory/
 %dir %{_datadir}/factory/etc
