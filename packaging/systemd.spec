@@ -30,6 +30,7 @@ Source1:        pamconsole-tmp.conf
 Source2:        %{name}-rpmlintrc
 Source1001:     systemd.manifest
 Source3:        systemd_upgrade.sh
+Source4:        test-runner.c
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
 BuildRequires:  libacl-devel
@@ -108,9 +109,19 @@ initialization at boot.
 'systemd-analyze plot' renders an SVG visualizing the parallel start of units
 at boot.
 
+%package tests
+License:        LGPL-2.1+ and Apache-2.0
+Summary:        Set of tests for sd-bus component
+Requires:       %{name} = %{version}
+
+%description tests
+This package is part of 'dbus-integratnion-tests' framework and contains set of tests
+for sd-bus component (DBUS API C library).
+
 %prep
 %setup -q
 cp %{SOURCE1001} .
+cp %{SOURCE4} .
 
 %build
 %autogen
@@ -158,6 +169,9 @@ cp %{SOURCE1001} .
 make %{?_smp_mflags} \
         systemunitdir=%{_unitdir} \
         userunitdir=%{_unitdir_user}
+
+# compile test-runner for 'dbus-integration-test' framework
+%__cc %{_builddir}/%{name}-%{version}/test-runner.c -o %{_builddir}/%{name}-%{version}/systemd-tests
 
 %install
 %make_install
@@ -267,6 +281,11 @@ rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-debug-genera
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-efi-boot-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-gpt-auto-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-hibernate-resume-generator
+
+# Preapre tests for 'dbus-integration-test' framework
+install -D -m 755 %{_builddir}/%{name}-%{version}/systemd-tests %{buildroot}%{_prefix}/lib/dbus-tests/runner/systemd-tests
+mkdir -p %{buildroot}%{_prefix}/lib/dbus-tests/test-suites/systemd-tests/
+mv %{_builddir}/%{name}-%{version}/.libs/test-bus-* %{buildroot}%{_prefix}/lib/dbus-tests/test-suites/systemd-tests/
 
 # Shell Completion
 %if ! %{?WITH_BASH_COMPLETION}
@@ -571,4 +590,7 @@ fi
 %manifest %{name}.manifest
 %{_bindir}/systemd-analyze
 
-%docs_package
+%files tests
+%manifest %{name}.manifest
+%{_prefix}/lib/dbus-tests/test-suites/systemd-tests/
+%{_prefix}/lib/dbus-tests/runner/systemd-tests
