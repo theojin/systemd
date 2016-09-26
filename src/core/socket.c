@@ -1199,14 +1199,9 @@ static int usbffs_select_ep(const struct dirent *d) {
 
 static int usbffs_dispatch_eps(SocketPort *p) {
         _cleanup_free_ struct dirent **ent = NULL;
-        _cleanup_free_ char *path = NULL;
         int r, i, n, k;
 
-        path = dirname_malloc(p->path);
-        if (!path)
-                return -ENOMEM;
-
-        r = scandir(path, &ent, usbffs_select_ep, alphasort);
+        r = scandir(p->path, &ent, usbffs_select_ep, alphasort);
         if (r < 0)
                 return -errno;
 
