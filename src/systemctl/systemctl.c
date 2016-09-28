@@ -5269,6 +5269,20 @@ static int mangle_names(char **original_names, char ***mangled_names) {
         return 0;
 }
 
+static int check_args_is_path(char **args)
+{
+        char **name;
+
+        STRV_FOREACH(name, args) {
+                if (is_path(*name))
+                {
+                        return 1;
+                }
+        }
+
+        return 0;
+}
+
 static int enable_unit(sd_bus *bus, char **args) {
         _cleanup_strv_free_ char **names = NULL;
         const char *verb = args[0];
@@ -5279,6 +5293,12 @@ static int enable_unit(sd_bus *bus, char **args) {
 
         if (!args[1])
                 return 0;
+
+        if (streq(verb, "enable")) {
+                if ( check_args_is_path(args+1) == 1 ) {
+                        return 0;
+                }
+        }
 
         r = mangle_names(args+1, &names);
         if (r < 0)
