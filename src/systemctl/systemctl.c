@@ -5710,6 +5710,21 @@ static int unit_exists(const char *unit) {
         return !streq_ptr(info.load_state, "not-found") || !streq_ptr(info.active_state, "inactive");
 }
 
+static int check_args_is_path(char **args)
+{
+        char **name;
+
+        STRV_FOREACH(name, args) {
+                if (is_path(*name))
+                {
+                        return 1;
+                }
+        }
+
+        return 0;
+}
+
+
 static int enable_unit(int argc, char *argv[], void *userdata) {
         _cleanup_strv_free_ char **names = NULL;
         const char *verb = argv[0];
@@ -5721,6 +5736,12 @@ static int enable_unit(int argc, char *argv[], void *userdata) {
 
         if (!argv[1])
                 return 0;
+
+        if (streq(verb, "enable")) {
+                if ( check_args_is_path(args+1) == 1 ) {
+                        return 0;
+                }
+        }
 
         r = mangle_names(strv_skip(argv, 1), &names);
         if (r < 0)
