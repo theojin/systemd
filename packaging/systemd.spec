@@ -18,7 +18,7 @@
 %define WITH_MACHINED 0
 
 Name:           systemd
-Version:        219
+Version:        231
 Release:        0%{?release_flags}
 # For a breakdown of the licensing, see README
 License:        LGPL-2.1+ and MIT and GPL-2.0+
