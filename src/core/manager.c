@@ -878,6 +878,28 @@ static int manager_setup_user_lookup_fd(Manager *m) {
         return 0;
 }
 
+static int manager_setup_kdbus(Manager *m) {
+        _cleanup_free_ char *p = NULL;
+
+        assert(m);
+
+        if (m->test_run || m->kdbus_fd >= 0)
+                return 0;
+        if (!is_kdbus_available())
+                return -ESOCKTNOSUPPORT;
+
+        m->kdbus_fd = bus_kernel_create_bus(
+                        MANAGER_IS_SYSTEM(m) ? "system" : "user",
+                        MANAGER_IS_SYSTEM(m), &p);
+
+        if (m->kdbus_fd < 0)
+                return log_debug_errno(m->kdbus_fd, "Failed to set up kdbus: %m");
+
+        log_debug("Successfully set up kdbus on %s", p);
+
+        return 0;
+}
+
 static int manager_connect_bus(Manager *m, bool reexecuting) {
         bool try_bus_connect;
 
@@ -1320,6 +1342,10 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
         q = manager_setup_user_lookup_fd(m);
         if (q < 0 && r == 0)
                 r = q;
+
+        /* We might have deserialized the kdbus control fd, but if we
+         * didn't, then let's create the bus now. */
+        manager_setup_kdbus(m);
 
         /* Let's connect to the bus now. */
         (void) manager_connect_bus(m, !!serialization);

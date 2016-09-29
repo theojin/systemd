@@ -65,23 +65,23 @@ cd $oldpwd
 
 if [ "$verb" = "c" ]; then
         set -x
-        $topdir/configure CFLAGS='-g -O0 -ftrapv' $args
+        $topdir/configure CFLAGS='-g -O0 -ftrapv' --enable-kdbus $args
         make clean >/dev/null
 elif [ "$verb" = "g" ]; then
         set -x
-        $topdir/configure CFLAGS='-g -Og -ftrapv' $args
+        $topdir/configure CFLAGS='-g -Og -ftrapv' --enable-kdbus $args
         make clean >/dev/null
 elif [ "$verb" = "a" ]; then
         set -x
-        $topdir/configure CFLAGS='-g -O0 -Wsuggest-attribute=pure -Wsuggest-attribute=const -ftrapv' $args
+        $topdir/configure CFLAGS='-g -O0 -Wsuggest-attribute=pure -Wsuggest-attribute=const -ftrapv' --enable-kdbus $args
         make clean >/dev/null
 elif [ "$verb" = "l" ]; then
         set -x
-        $topdir/configure CC=clang CFLAGS='-g -O0 -ftrapv' $args
+        $topdir/configure CC=clang CFLAGS='-g -O0 -ftrapv' --enable-kdbus $args
         make clean >/dev/null
 elif [ "$verb" = "s" ]; then
         set -x
-        scan-build $topdir/configure CFLAGS='-std=gnu99 -g -O0 -ftrapv' $args
+        scan-build $topdir/configure CFLAGS='-std=gnu99 -g -O0 -ftrapv' --enable-kdbus $args
         scan-build make
 else
         echo
@@ -89,6 +89,6 @@ else
         echo "Initialized build system. For a common configuration please run:"
         echo "----------------------------------------------------------------"
         echo
-        echo "$topdir/configure CFLAGS='-g -O0 -ftrapv' $args"
+        echo "$topdir/configure CFLAGS='-g -O0 -ftrapv' --enable-kdbus $args"
         echo
 fi
