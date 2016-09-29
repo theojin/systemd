@@ -998,7 +998,12 @@ static int busname_get_timeout(Unit *u, usec_t *timeout) {
 }
 
 static bool busname_supported(void) {
-        return false;
+        static int supported = -1;
+
+        if (supported < 0)
+                supported = is_kdbus_available();
+
+        return supported;
 }
 
 static int busname_control_pid(Unit *u) {
