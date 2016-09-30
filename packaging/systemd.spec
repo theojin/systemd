@@ -549,10 +549,6 @@ fi
 %endif
 %{_libdir}/libsystemd.so.*
 %{_libdir}/libudev.so.*
-%{_libdir}/libsystemd-daemon.so.*
-%{_libdir}/libsystemd-id128.so.*
-%{_libdir}/libsystemd-journal.so.*
-%{_libdir}/libsystemd-login.so.*
 %{_libdir}/libnss_myhostname.so.2
 %if %{?WITH_MACHINED}
 %{_libdir}/libnss_mymachines.so.2
@@ -562,20 +558,12 @@ fi
 %manifest %{name}.manifest
 %{_libdir}/libudev.so
 %{_libdir}/libsystemd.so
-%{_libdir}/libsystemd-daemon.so
-%{_libdir}/libsystemd-id128.so
-%{_libdir}/libsystemd-journal.so
-%{_libdir}/libsystemd-login.so
 %dir %{_includedir}/systemd
 %if %{with kdbus}
 %{_includedir}/systemd/sd-bus.h
 %{_includedir}/systemd/sd-bus-protocol.h
 %{_includedir}/systemd/sd-bus-vtable.h
 %{_includedir}/systemd/sd-event.h
-%{_includedir}/systemd/sd-path.h
-%{_includedir}/systemd/sd-resolve.h
-%{_includedir}/systemd/sd-rtnl.h
-%{_includedir}/systemd/sd-utf8.h
 %endif
 %{_includedir}/systemd/_sd-common.h
 %{_includedir}/systemd/sd-daemon.h
@@ -586,11 +574,7 @@ fi
 %{_includedir}/libudev.h
 %{_libdir}/pkgconfig/libudev.pc
 %{_libdir}/pkgconfig/libsystemd.pc
-%{_libdir}/pkgconfig/libsystemd-daemon.pc
-%{_libdir}/pkgconfig/libsystemd-id128.pc
-%{_libdir}/pkgconfig/libsystemd-journal.pc
-%{_libdir}/pkgconfig/libsystemd-login.pc
-%{_libdir}/pkgconfig/systemd.pc
+%{_datadir}/pkgconfig/systemd.pc
 %{_datadir}/pkgconfig/udev.pc
 %{_sysconfdir}/rpm/macros.systemd
 
