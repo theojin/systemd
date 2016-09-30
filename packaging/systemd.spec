@@ -146,7 +146,6 @@ cp %{SOURCE1001} .
 	--disable-rfkill \
 %endif
         --enable-compat-libs \
-        --enable-bootchart \
         --disable-hwdb \
         --disable-sysusers \
         --disable-firstboot \
@@ -410,7 +409,6 @@ fi
 %if %{?WITH_MACHINED}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.machine1.conf
 %endif
-%config(noreplace) %{_sysconfdir}/systemd/bootchart.conf
 %if %{?WITH_COREDUMP}
 %config(noreplace) %{_sysconfdir}/systemd/coredump.conf
 %endif
