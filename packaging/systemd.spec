@@ -196,12 +196,6 @@ EOF
 # them.
 /usr/bin/rm -r %{buildroot}%{_sysconfdir}/systemd/system/*.target.wants
 
-# Make sure the ghost-ing below works
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel2.target
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel3.target
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel4.target
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel5.target
-
 # Make sure these directories are properly owned
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system/basic.target.wants
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system/default.target.wants
@@ -525,13 +519,6 @@ fi
 
 %dir %{_datadir}/upgrade/scripts
 %{_datadir}/upgrade/scripts/systemd_upgrade.sh
-
-# Make sure we don't remove runlevel targets from F14 alpha installs,
-# but make sure we don't create then anew.
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel2.target
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel3.target
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel4.target
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel5.target
 
 %files -n libsystemd
 %manifest %{name}.manifest
