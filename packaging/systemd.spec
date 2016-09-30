@@ -158,11 +158,16 @@ make %{?_smp_mflags} \
 %make_install
 %find_lang %{name}
 cat <<EOF >> systemd.lang
+%lang(be) /usr/lib/systemd/catalog/systemd.be.catalog
+%lang(be) /usr/lib/systemd/catalog/systemd.be@latin.catalog
+%lang(bg) /usr/lib/systemd/catalog/systemd.bg.catalog
 %lang(fr) /usr/lib/systemd/catalog/systemd.fr.catalog
 %lang(it) /usr/lib/systemd/catalog/systemd.it.catalog
-%lang(ru) /usr/lib/systemd/catalog/systemd.ru.catalog
 %lang(pl) /usr/lib/systemd/catalog/systemd.pl.catalog
 %lang(pt_BR) /usr/lib/systemd/catalog/systemd.pt_BR.catalog
+%lang(ru) /usr/lib/systemd/catalog/systemd.ru.catalog
+%lang(zh) /usr/lib/systemd/catalog/systemd.zh_CN.catalog
+%lang(zh) /usr/lib/systemd/catalog/systemd.zh_TW.catalog
 EOF
 
 # udev links
@@ -413,6 +418,7 @@ fi
 %{_bindir}/systemd-ask-password
 %{_bindir}/systemd-tty-ask-password-agent
 %{_bindir}/systemd-machine-id-setup
+%{_bindir}/systemd-socket-activate
 %if %{?with_multiuser}
 %{_bindir}/loginctl
 %{_bindir}/systemd-loginctl
@@ -455,10 +461,13 @@ fi
 %endif
 %exclude %{_prefix}/lib/systemd/network/80-container-ve.network
 %exclude %{_prefix}/lib/systemd/network/80-container-host0.network
+%exclude %{_prefix}/lib/systemd/network/80-container-vz.network
 %{_prefix}/lib/systemd/user/default.target
 %{_prefix}/lib/systemd/network/99-default.link
 %exclude %{_prefix}/lib/systemd/system-preset/90-systemd.preset
 
+%{_prefix}/lib/systemd/libsystemd-shared-231.so
+%{_prefix}/lib/systemd/libsystemd-shared.so
 %{_prefix}/lib/systemd/systemd-*
 %dir %{_prefix}/lib/systemd/catalog
 %{_prefix}/lib/systemd/catalog/systemd.catalog
@@ -470,14 +479,17 @@ fi
 %{_prefix}/lib/systemd/user-generators/systemd-dbus1-generator
 %endif
 %{_prefix}/lib/systemd/system-generators/systemd-system-update-generator
-%{_prefix}/lib/tmpfiles.d/systemd.conf
-%{_prefix}/lib/tmpfiles.d/x11.conf
-%{_prefix}/lib/tmpfiles.d/tmp.conf
+%{_prefix}/lib/tmpfiles.d/etc.conf
+%{_prefix}/lib/tmpfiles.d/home.conf
+%{_prefix}/lib/tmpfiles.d/journal-nocow.conf
 %{_prefix}/lib/tmpfiles.d/legacy.conf
 %{_prefix}/lib/tmpfiles.d/pamconsole-tmp.conf
+%{_prefix}/lib/tmpfiles.d/systemd.conf
 %{_prefix}/lib/tmpfiles.d/systemd-nologin.conf
-%{_prefix}/lib/tmpfiles.d/etc.conf
+%{_prefix}/lib/tmpfiles.d/systemd-nspawn.conf
+%{_prefix}/lib/tmpfiles.d/tmp.conf
 %{_prefix}/lib/tmpfiles.d/var.conf
+%{_prefix}/lib/tmpfiles.d/x11.conf
 %{_sbindir}/init
 %{_sbindir}/reboot
 %{_sbindir}/halt
