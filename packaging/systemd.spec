@@ -104,24 +104,6 @@ initialization at boot.
 'systemd-analyze plot' renders an SVG visualizing the parallel start of units
 at boot.
 
-%package -n libgudev
-License:        LGPL-2.1+
-Summary:        Libraries for adding libudev support to applications that use glib
-Requires:       %{name} = %{version}
-
-%description -n libgudev
-This package contains the libraries that make it easier to use libudev
-functionality from applications that use glib.
-
-%package -n libgudev-devel
-License:        LGPL-2.1+
-Summary:        Header files for adding libudev support to applications that use glib
-Requires:       libgudev = %{version}
-
-%description -n libgudev-devel
-This package contains the header and pkg-config files for developing
-glib-based applications using libudev functionality.
-
 %prep
 %setup -q
 cp %{SOURCE1001} .
@@ -335,10 +317,6 @@ fi
 
 %post -n libsystemd -p /sbin/ldconfig
 %postun -n libsystemd  -p /sbin/ldconfig
-
-%post -n libgudev -p /sbin/ldconfig
-%postun -n libgudev -p /sbin/ldconfig
-
 
 %lang_package
 
@@ -581,17 +559,5 @@ fi
 %files analyze
 %manifest %{name}.manifest
 %{_bindir}/systemd-analyze
-
-%files -n libgudev
-%manifest %{name}.manifest
-%{_libdir}/libgudev-1.0.so.*
-
-%files -n libgudev-devel
-%manifest %{name}.manifest
-%{_libdir}/libgudev-1.0.so
-%dir %{_includedir}/gudev-1.0
-%dir %{_includedir}/gudev-1.0/gudev
-%{_includedir}/gudev-1.0/gudev/*.h
-%{_libdir}/pkgconfig/gudev-1.0*
 
 %docs_package
