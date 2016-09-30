@@ -75,6 +75,7 @@ License:        LGPL-2.1+ and MIT
 Summary:        Systemd libraries
 Group:          Base/Startup
 Obsoletes:      libudev < 183
+Provides:       libudev = %{version}
 Obsoletes:      systemd < 185-4
 Conflicts:      systemd < 185-4
 
