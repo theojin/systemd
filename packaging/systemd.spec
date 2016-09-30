@@ -441,6 +441,7 @@ fi
 %{_prefix}/lib/sysctl.d/*.conf
 %{_prefix}/lib/systemd/systemd
 %{_prefix}/lib/systemd/system
+%exclude %{_prefix}/lib/systemd/resolv.conf
 
 %dir %{_prefix}/lib/systemd/system/basic.target.wants
 %dir %{_prefix}/lib/systemd/user
