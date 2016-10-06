@@ -978,8 +978,13 @@ static bool busname_supported(Manager *m) {
         static int supported = -1;
         assert(m);
 
-        if (supported < 0)
+        if (supported < 0) {
+#ifdef ENABLE_KDBUS
                 supported = access("/sys/fs/kdbus", F_OK) >= 0;
+#else
+                supported = 0;
+#endif
+        }
 
         return supported;
 }
