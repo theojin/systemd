@@ -1669,7 +1669,8 @@ static int manager_dispatch_notify_fd(sd_event_source *source, int fd, uint32_t 
                 r = fdset_new_array(&fds, fd_array, n_fds);
                 if (r < 0) {
                         close_many(fd_array, n_fds);
-                        return log_oom();
+                        log_oom();
+                        return 0;
                 }
         }
 
