@@ -1052,3 +1052,176 @@ _public_ int sd_login_monitor_get_timeout(sd_login_monitor *m, uint64_t *timeout
         *timeout_usec = (uint64_t) -1;
         return 0;
 }
+
+#define GUMD_CONF_FILE    "/etc/gumd/gumd.conf"
+#define UID_MIN           5001
+#define UID_MAX           60000
+#define CONTAINER_UID_MIN 60001
+#define CONTAINER_UID_MAX 60100
+
+static uid_t uid_min = 0, uid_max = 0;
+static uid_t con_uid_min = 0, con_uid_max = 0;
+
+static int sd_get_uid_range(uid_t *start, uid_t *end)
+{
+        int r;
+        _cleanup_free_ char *c_uid_min = NULL, *c_uid_max = NULL;
+
+        if(uid_min == 0) {
+               r = parse_env_file(GUMD_CONF_FILE, NEWLINE, "UID_MIN", &c_uid_min, NULL);
+               if (r < 0)
+                       return r;
+               uid_min = atoi(c_uid_min);
+               c_uid_min = NULL;
+        }
+        *start = uid_min;
+
+        if(uid_max == 0) {
+                r = parse_env_file(GUMD_CONF_FILE, NEWLINE, "UID_MAX", &c_uid_max, NULL);
+                if (r < 0)
+                        return r;
+                uid_max = atoi(c_uid_max);
+                c_uid_max = NULL;
+        }
+        *end = uid_max;
+
+        return 0;
+}
+
+static int sd_get_container_range(uid_t *start, uid_t *end)
+{
+        int r;
+        _cleanup_free_ char *c_uid_min = NULL, *c_uid_max = NULL;
+
+        if(con_uid_min == 0) {
+                r = parse_env_file(GUMD_CONF_FILE, NEWLINE, "SEC_UID_MIN", &c_uid_min, NULL);
+                if (r < 0)
+                        return r;
+                con_uid_min = atoi(c_uid_min);
+                c_uid_min = NULL;
+        }
+        *start = con_uid_min;
+
+        if(con_uid_max == 0) {
+                r = parse_env_file(GUMD_CONF_FILE, NEWLINE, "SEC_UID_MAX", &c_uid_max, NULL);
+                if (r < 0)
+                        return r;
+                con_uid_max = atoi(c_uid_max);
+                c_uid_max = NULL;
+        }
+        *end = con_uid_max;
+
+        return 0;
+}
+
+_public_ int sd_get_active_uids(uid_t **users) {
+        _cleanup_closedir_ DIR *d;
+        int r = 0;
+        unsigned n = 0;
+        uid_t uid_min, uid_max;
+        _cleanup_free_ uid_t *l = NULL;
+
+        if(sd_get_uid_range(&uid_min, &uid_max) != 0) {
+                uid_min = UID_MIN;
+                uid_max = UID_MAX;
+        }
+
+        d = opendir("/run/systemd/users/");
+        if (!d)
+                return -errno;
+
+        for (;;) {
+                struct dirent *de;
+                int k;
+                uid_t uid;
+
+                errno = 0;
+                de = readdir(d);
+                if (!de && errno != 0)
+                        return -errno;
+
+                if (!de)
+                        break;
+
+                dirent_ensure_type(d, de);
+
+                if (!dirent_is_file(de))
+                        continue;
+
+                k = parse_uid(de->d_name, &uid);
+                if (k < 0)
+                        continue;
+
+                if(uid < uid_min && uid > uid_max)
+                        continue;
+
+                if (users) {
+                        if ((unsigned) r >= n) {
+                                uid_t *t;
+
+                                n = MAX(16, 2*r);
+                                t = realloc(l, sizeof(uid_t) * n);
+                                if (!t)
+                                        return -ENOMEM;
+
+                                l = t;
+                        }
+
+                        assert((unsigned) r < n);
+                        l[r++] = uid;
+                } else
+                        r++;
+        }
+
+        if (users) {
+                *users = l;
+                l = NULL;
+        }
+
+        return r;
+}
+
+_public_ int sd_get_system_uids(uid_t uid, uid_t **users) {
+        /* FIXME : After complete to design, should implement this function
+         * Temporarily, if active users include uid, return users and the number of users.
+         * Or return 0 */
+
+        int cnt, i;
+
+        cnt = sd_get_uids(users);
+        for( i = 0 ; i < cnt ; i++ ) {
+                if(*users[i] == uid) {
+                        return cnt;
+                }
+        }
+
+        free(*users);
+
+        return 0;
+}
+
+_public_ int sd_get_uid_type(uid_t uid) {
+        uid_t uid_min, uid_max;
+        uid_t con_min, con_max;
+
+        if(sd_get_uid_range(&uid_min, &uid_max) != 0) {
+                uid_min = UID_MIN;
+                uid_max = UID_MAX;
+        }
+
+        if(uid >= uid_min && uid <= uid_max) {
+                return NORMAL_USER_TYPE;
+        }
+
+        if(sd_get_container_range(&con_min, &con_max) != 0) {
+                con_min = CONTAINER_UID_MIN;
+                con_max = CONTAINER_UID_MAX;
+        }
+
+        if(uid >= con_min && uid <= con_max) {
+                return CONTAINER_TYPE;
+        } else {
+                return UNKNOWN_USER_TYPE;
+        }
+}
+
