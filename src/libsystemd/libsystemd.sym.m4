@@ -122,6 +122,9 @@ global:
         sd_session_is_remote;
         sd_session_get_remote_user;
         sd_session_get_remote_host;
+        sd_get_active_uids;
+        sd_get_system_uids;
+        sd_get_uid_type;
 local:
        *;
 };

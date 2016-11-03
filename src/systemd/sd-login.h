@@ -225,6 +225,23 @@ int sd_login_monitor_get_events(sd_login_monitor *m);
 /* Get timeout for poll(), as usec value relative to CLOCK_MONOTONIC's epoch */
 int sd_login_monitor_get_timeout(sd_login_monitor *m, uint64_t *timeout_usec);
 
+
+/* Get all logged in users, store in *users. Returns the number of
+ * users. If users is NULL, this only returns the number of users. */
+int sd_get_active_uids(uid_t **users);
+
+/* Get all system-users related to uid. Returns the number of
+ * system-users. If there is an error, returns the negative value*/
+int sd_get_system_uids(uid_t uid, uid_t **users);
+
+#define UNKNOWN_USER_TYPE -1
+#define NORMAL_USER_TYPE  1
+#define CONTAINER_TYPE    2
+/* Get the type of the user id. Returns the type of user.
+ * type : NORMAL_USER_TYPE, CONTAINER_TYPE, UNKNOWN_USER_TYPE */
+int sd_get_uid_type(uid_t uid);
+
+
 _SD_END_DECLARATIONS;
 
 #endif
