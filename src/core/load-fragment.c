@@ -64,7 +64,6 @@
 #include "unit-name.h"
 #include "unit-printf.h"
 #include "unit.h"
-#include "user-util.h"
 #include "utf8.h"
 #include "web-util.h"
 
@@ -491,17 +490,16 @@ int config_parse_socket_bind(const char *unit,
         return 0;
 }
 
-int config_parse_exec_nice(
-                const char *unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
+int config_parse_exec_nice(const char *unit,
+                           const char *filename,
+                           unsigned line,
+                           const char *section,
+                           unsigned section_line,
+                           const char *lvalue,
+                           int ltype,
+                           const char *rvalue,
+                           void *data,
+                           void *userdata) {
 
         ExecContext *c = data;
         int priority, r;
@@ -511,13 +509,14 @@ int config_parse_exec_nice(
         assert(rvalue);
         assert(data);
 
-        r = parse_nice(rvalue, &priority);
+        r = safe_atoi(rvalue, &priority);
         if (r < 0) {
-                if (r == -ERANGE)
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Nice priority out of range, ignoring: %s", rvalue);
-                else
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse nice priority, ignoring: %s", rvalue);
+                log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse nice priority, ignoring: %s", rvalue);
+                return 0;
+        }
 
+        if (priority < PRIO_MIN || priority >= PRIO_MAX) {
+                log_syntax(unit, LOG_ERR, filename, line, 0, "Nice priority out of range, ignoring: %s", rvalue);
                 return 0;
         }
 
@@ -1338,13 +1337,10 @@ int config_parse_timer(const char *unit,
                        void *userdata) {
 
         Timer *t = data;
-        usec_t usec = 0;
+        usec_t u = 0;
         TimerValue *v;
         TimerBase b;
         CalendarSpec *c = NULL;
-        Unit *u = userdata;
-        _cleanup_free_ char *k = NULL;
-        int r;
 
         assert(filename);
         assert(lvalue);
@@ -1363,20 +1359,14 @@ int config_parse_timer(const char *unit,
                 return 0;
         }
 
-        r = unit_full_printf(u, rvalue, &k);
-        if (r < 0) {
-                log_syntax(unit, LOG_ERR, filename, line, r, "Failed to resolve unit specifiers in %s, ignoring: %m", rvalue);
-                return 0;
-        }
-
         if (b == TIMER_CALENDAR) {
-                if (calendar_spec_from_string(k, &c) < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse calendar specification, ignoring: %s", k);
+                if (calendar_spec_from_string(rvalue, &c) < 0) {
+                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse calendar specification, ignoring: %s", rvalue);
                         return 0;
                 }
         } else {
-                if (parse_sec(k, &usec) < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse timer value, ignoring: %s", k);
+                if (parse_sec(rvalue, &u) < 0) {
+                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse timer value, ignoring: %s", rvalue);
                         return 0;
                 }
         }
@@ -1388,7 +1378,7 @@ int config_parse_timer(const char *unit,
         }
 
         v->base = b;
-        v->value = usec;
+        v->value = u;
         v->calendar_spec = c;
 
         LIST_PREPEND(value, t->values, v);
@@ -1769,123 +1759,6 @@ int config_parse_sec_fix_0(
 
         if (*usec <= 0)
                 *usec = USEC_INFINITY;
-
-        return 0;
-}
-
-int config_parse_user_group(
-                const char *unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        char **user = data, *n;
-        Unit *u = userdata;
-        int r;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-        assert(u);
-
-        if (isempty(rvalue))
-                n = NULL;
-        else {
-                _cleanup_free_ char *k = NULL;
-
-                r = unit_full_printf(u, rvalue, &k);
-                if (r < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to resolve unit specifiers in %s, ignoring: %m", rvalue);
-                        return 0;
-                }
-
-                if (!valid_user_group_name_or_id(k)) {
-                        log_syntax(unit, LOG_ERR, filename, line, 0, "Invalid user/group name or numeric ID, ignoring: %s", k);
-                        return 0;
-                }
-
-                n = k;
-                k = NULL;
-        }
-
-        free(*user);
-        *user = n;
-
-        return 0;
-}
-
-int config_parse_user_group_strv(
-                const char *unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        char ***users = data;
-        Unit *u = userdata;
-        const char *p;
-        int r;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-        assert(u);
-
-        if (isempty(rvalue)) {
-                char **empty;
-
-                empty = new0(char*, 1);
-                if (!empty)
-                        return log_oom();
-
-                strv_free(*users);
-                *users = empty;
-
-                return 0;
-        }
-
-        p = rvalue;
-        for (;;) {
-                _cleanup_free_ char *word = NULL, *k = NULL;
-
-                r = extract_first_word(&p, &word, WHITESPACE, 0);
-                if (r == 0)
-                        break;
-                if (r == -ENOMEM)
-                        return log_oom();
-                if (r < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Invalid syntax, ignoring: %s", rvalue);
-                        break;
-                }
-
-                r = unit_full_printf(u, word, &k);
-                if (r < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to resolve unit specifiers in %s, ignoring: %m", word);
-                        continue;
-                }
-
-                if (!valid_user_group_name_or_id(k)) {
-                        log_syntax(unit, LOG_ERR, filename, line, 0, "Invalid user/group name or numeric ID, ignoring: %s", k);
-                        continue;
-                }
-
-                r = strv_push(users, k);
-                if (r < 0)
-                        return log_oom();
-
-                k = NULL;
-        }
 
         return 0;
 }
@@ -2860,34 +2733,6 @@ int config_parse_unit_slice(
 
 DEFINE_CONFIG_PARSE_ENUM(config_parse_device_policy, cgroup_device_policy, CGroupDevicePolicy, "Failed to parse device policy");
 
-int config_parse_cpu_weight(
-                const char *unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        uint64_t *weight = data;
-        int r;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-
-        r = cg_weight_parse(rvalue, weight);
-        if (r < 0) {
-                log_syntax(unit, LOG_ERR, filename, line, r, "CPU weight '%s' invalid. Ignoring.", rvalue);
-                return 0;
-        }
-
-        return 0;
-}
-
 int config_parse_cpu_shares(
                 const char *unit,
                 const char *filename,
@@ -2940,7 +2785,7 @@ int config_parse_cpu_quota(
                 return 0;
         }
 
-        r = parse_percent_unbounded(rvalue);
+        r = parse_percent(rvalue);
         if (r <= 0) {
                 log_syntax(unit, LOG_ERR, filename, line, r, "CPU quota '%s' invalid. Ignoring.", rvalue);
                 return 0;
@@ -2990,12 +2835,8 @@ int config_parse_memory_limit(
                 c->memory_high = bytes;
         else if (streq(lvalue, "MemoryMax"))
                 c->memory_max = bytes;
-        else if (streq(lvalue, "MemorySwapMax"))
-                c->memory_swap_max = bytes;
-        else if (streq(lvalue, "MemoryLimit"))
-                c->memory_limit = bytes;
         else
-                return -EINVAL;
+                c->memory_limit = bytes;
 
         return 0;
 }
@@ -3012,36 +2853,30 @@ int config_parse_tasks_max(
                 void *data,
                 void *userdata) {
 
-        uint64_t *tasks_max = data, v;
-        Unit *u = userdata;
+        uint64_t *tasks_max = data, u;
         int r;
 
-        if (isempty(rvalue)) {
-                *tasks_max = u->manager->default_tasks_max;
-                return 0;
-        }
-
-        if (streq(rvalue, "infinity")) {
-                *tasks_max = CGROUP_LIMIT_MAX;
+        if (isempty(rvalue) || streq(rvalue, "infinity")) {
+                *tasks_max = (uint64_t) -1;
                 return 0;
         }
 
         r = parse_percent(rvalue);
         if (r < 0) {
-                r = safe_atou64(rvalue, &v);
+                r = safe_atou64(rvalue, &u);
                 if (r < 0) {
                         log_syntax(unit, LOG_ERR, filename, line, r, "Maximum tasks value '%s' invalid. Ignoring.", rvalue);
                         return 0;
                 }
         } else
-                v = system_tasks_max_scale(r, 100U);
+                u = system_tasks_max_scale(r, 100U);
 
-        if (v <= 0 || v >= UINT64_MAX) {
+        if (u <= 0 || u >= UINT64_MAX) {
                 log_syntax(unit, LOG_ERR, filename, line, 0, "Maximum tasks value '%s' out of range. Ignoring.", rvalue);
                 return 0;
         }
 
-        *tasks_max = v;
+        *tasks_max = u;
         return 0;
 }
 
@@ -4238,7 +4073,6 @@ void unit_dump_config_items(FILE *f) {
                 { config_parse_address_families,      "FAMILIES" },
 #endif
                 { config_parse_cpu_shares,            "SHARES" },
-                { config_parse_cpu_weight,            "WEIGHT" },
                 { config_parse_memory_limit,          "LIMIT" },
                 { config_parse_device_allow,          "DEVICE" },
                 { config_parse_device_policy,         "POLICY" },

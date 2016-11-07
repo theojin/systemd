@@ -99,36 +99,12 @@
   <refsect1>
     <title>Unified and Legacy Control Group Hierarchies</title>
 
-    <para>The unified control group hierarchy is the new version of kernel control group interface, see <ulink
-    url="https://www.kernel.org/doc/Documentation/cgroup-v2.txt">cgroup-v2.txt</ulink>. Depending on the resource type,
-    there are differences in resource control capabilities.  Also, because of interface changes, some resource types
-    have separate set of options on the unified hierarchy.</para>
+    <para>The unified control group hierarchy is the new version of kernel control group interface. Depending on the
+    resource type, there are differences in resource control capabilities.  Also, because of interface changes, some
+    resource types have a separate set of options on the unified hierarchy.</para>
 
     <para>
       <variablelist>
-
-        <varlistentry>
-          <term><option>CPU</option></term>
-          <listitem>
-            <para>Due to the lack of consensus in the kernel community, the CPU controller support on the unified
-            cgroup hierarchy requires out-of-tree kernel patches. See <ulink
-            url="https://git.kernel.org/cgit/linux/kernel/git/tj/cgroup.git/tree/Documentation/cgroup-v2-cpu.txt?h=cgroup-v2-cpu">cgroup-v2-cpu.txt</ulink>.</para>
-
-            <para><varname>CPUWeight=</varname> and <varname>StartupCPUWeight=</varname> replace
-            <varname>CPUShares=</varname> and <varname>StartupCPUShares=</varname>, respectively.</para>
-
-            <para>The <literal>cpuacct</literal> controller does not exist separately on the unified hierarchy.</para>
-          </listitem>
-        </varlistentry>
-
-        <varlistentry>
-          <term><option>Memory</option></term>
-          <listitem>
-            <para><varname>MemoryMax=</varname> replaces <varname>MemoryLimit=</varname>. <varname>MemoryLow=</varname>
-            and <varname>MemoryHigh=</varname> are effective only on unified hierarchy.</para>
-          </listitem>
-        </varlistentry>
-
         <varlistentry>
           <term><option>IO</option></term>
           <listitem>
@@ -136,7 +112,13 @@
             prefixed ones. On unified hierarchy, IO resource control also applies to buffered writes.</para>
           </listitem>
         </varlistentry>
-
+        <varlistentry>
+          <term><option>Memory</option></term>
+          <listitem>
+            <para><varname>MemoryMax=</varname> replaces <varname>MemoryLimit=</varname>. <varname>MemoryLow=</varname>
+            and <varname>MemoryHigh=</varname> are effective only on unified hierarchy.</para>
+          </listitem>
+        </varlistentry>
       </variablelist>
     </para>
 
@@ -144,13 +126,6 @@
     settings of a unit for a given resource type are for the other hierarchy type, the settings are translated and
     applied. If there are any valid settings for the hierarchy in use, all translations are disabled for the resource
     type. Mixing the two types of settings on a unit can lead to confusing results.</para>
-
-    <para>Legacy control group hierarchy (see <ulink
-    url="https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt">cgroups.txt</ulink>), also called cgroup-v1,
-    doesn't allow safe delegation of controllers to unprivileged processes. If the system uses the legacy control group
-    hierarchy, resource control is disabled for systemd user instance, see
-    <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>.
-    </para>
   </refsect1>
 
   <refsect1>
@@ -177,49 +152,30 @@
       </varlistentry>
 
       <varlistentry>
-        <term><varname>CPUWeight=<replaceable>weight</replaceable></varname></term>
-        <term><varname>StartupCPUWeight=<replaceable>weight</replaceable></varname></term>
-
-        <listitem>
-          <para>Assign the specified CPU time weight to the processes executed, if the unified control group hierarchy
-          is used on the system. These options take an integer value and control the <literal>cpu.weight</literal>
-          control group attribute. The allowed range is 1 to 10000. Defaults to 100. For details about this control
-          group attribute, see <ulink
-          url="https://www.kernel.org/doc/Documentation/cgroup-v2.txt">cgroup-v2.txt</ulink> and <ulink
-          url="https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt">sched-design-CFS.txt</ulink>.
-          The available CPU time is split up among all units within one slice relative to their CPU time weight.</para>
-
-          <para>While <varname>StartupCPUWeight=</varname> only applies to the startup phase of the system,
-          <varname>CPUWeight=</varname> applies to normal runtime of the system, and if the former is not set also to
-          the startup phase. Using <varname>StartupCPUWeight=</varname> allows prioritizing specific services at
-          boot-up differently than during normal runtime.</para>
-
-          <para>Implies <literal>CPUAccounting=true</literal>.</para>
-
-          <para>These settings are supported only if the unified control group hierarchy is used.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><varname>CPUShares=<replaceable>weight</replaceable></varname></term>
         <term><varname>StartupCPUShares=<replaceable>weight</replaceable></varname></term>
 
         <listitem>
-          <para>Assign the specified CPU time share weight to the processes executed. These options take an integer
-          value and control the <literal>cpu.shares</literal> control group attribute. The allowed range is 2 to
-          262144. Defaults to 1024. For details about this control group attribute, see <ulink
+          <para>Assign the specified CPU time share weight to the
+          processes executed. These options take an integer value and
+          control the <literal>cpu.shares</literal> control group
+          attribute. The allowed range is 2 to 262144. Defaults to
+          1024. For details about this control group attribute, see
+          <ulink
           url="https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt">sched-design-CFS.txt</ulink>.
-          The available CPU time is split up among all units within one slice relative to their CPU time share
-          weight.</para>
+          The available CPU time is split up among all units within
+          one slice relative to their CPU time share weight.</para>
 
-          <para>While <varname>StartupCPUShares=</varname> only applies to the startup phase of the system,
-          <varname>CPUShares=</varname> applies to normal runtime of the system, and if the former is not set also to
-          the startup phase. Using <varname>StartupCPUShares=</varname> allows prioritizing specific services at
-          boot-up differently than during normal runtime.</para>
+          <para>While <varname>StartupCPUShares=</varname> only
+          applies to the startup phase of the system,
+          <varname>CPUShares=</varname> applies to normal runtime of
+          the system, and if the former is not set also to the startup
+          phase. Using <varname>StartupCPUShares=</varname> allows
+          prioritizing specific services at boot-up differently than
+          during normal runtime.</para>
 
-          <para>Implies <literal>CPUAccounting=true</literal>.</para>
-
-          <para>These settings are supported only if the legacy control group hierarchy is used.</para>
+          <para>These options imply
+          <literal>CPUAccounting=true</literal>.</para>
         </listitem>
       </varlistentry>
 
@@ -227,20 +183,22 @@
         <term><varname>CPUQuota=</varname></term>
 
         <listitem>
-          <para>Assign the specified CPU time quota to the processes executed. Takes a percentage value, suffixed with
-          "%". The percentage specifies how much CPU time the unit shall get at maximum, relative to the total CPU time
-          available on one CPU. Use values &gt; 100% for allotting CPU time on more than one CPU. This controls the
-          <literal>cpu.max</literal> attribute on the unified control group hierarchy and
-          <literal>cpu.cfs_quota_us</literal> on legacy. For details about these control group attributes, see <ulink
-          url="https://www.kernel.org/doc/Documentation/cgroup-v2.txt">cgroup-v2.txt</ulink> and <ulink
+          <para>Assign the specified CPU time quota to the processes
+          executed. Takes a percentage value, suffixed with "%". The
+          percentage specifies how much CPU time the unit shall get at
+          maximum, relative to the total CPU time available on one
+          CPU. Use values &gt; 100% for allotting CPU time on more than
+          one CPU. This controls the
+          <literal>cpu.cfs_quota_us</literal> control group
+          attribute. For details about this control group attribute,
+          see <ulink
           url="https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt">sched-design-CFS.txt</ulink>.</para>
 
-          <para>Example: <varname>CPUQuota=20%</varname> ensures that the executed processes will never get more than
-          20% CPU time on one CPU.</para>
+          <para>Example: <varname>CPUQuota=20%</varname> ensures that
+          the executed processes will never get more than 20% CPU time
+          on one CPU.</para>
 
           <para>Implies <literal>CPUAccounting=true</literal>.</para>
-
-          <para>This setting is supported on both unified and legacy control group hierarchies.</para>
         </listitem>
       </varlistentry>
 
@@ -322,24 +280,6 @@
 
           <para>This setting is supported only if the unified control group hierarchy is used. Use
           <varname>MemoryLimit=</varname> on systems using the legacy control group hierarchy.</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><varname>MemorySwapMax=<replaceable>bytes</replaceable></varname></term>
-
-        <listitem>
-          <para>Specify the absolute limit on swap usage of the executed processes in this unit.</para>
-
-          <para>Takes a swap size in bytes. If the value is suffixed with K, M, G or T, the specified swap size is
-          parsed as Kilobytes, Megabytes, Gigabytes, or Terabytes (with the base 1024), respectively. If assigned the
-          special value <literal>infinity</literal>, no swap limit is applied. This controls the
-          <literal>memory.swap.max</literal> control group attribute. For details about this control group attribute,
-          see <ulink url="https://www.kernel.org/doc/Documentation/cgroup-v2.txt">cgroup-v2.txt</ulink>.</para>
-
-          <para>Implies <literal>MemoryAccounting=true</literal>.</para>
-
-          <para>This setting is supported only if the unified control group hierarchy is used.</para>
         </listitem>
       </varlistentry>
 

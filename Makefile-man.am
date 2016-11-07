@@ -23,7 +23,6 @@ MANPAGES += \
 	man/localtime.5 \
 	man/machine-id.5 \
 	man/machine-info.5 \
-	man/nss-systemd.8 \
 	man/os-release.5 \
 	man/sd-bus-errors.3 \
 	man/sd-bus.3 \
@@ -52,8 +51,6 @@ MANPAGES += \
 	man/sd_bus_path_encode.3 \
 	man/sd_bus_process.3 \
 	man/sd_bus_request_name.3 \
-	man/sd_bus_track_add_name.3 \
-	man/sd_bus_track_new.3 \
 	man/sd_event_add_child.3 \
 	man/sd_event_add_defer.3 \
 	man/sd_event_add_io.3 \
@@ -123,7 +120,6 @@ MANPAGES += \
 	man/systemd-journald.service.8 \
 	man/systemd-machine-id-commit.service.8 \
 	man/systemd-machine-id-setup.1 \
-	man/systemd-mount.1 \
 	man/systemd-notify.1 \
 	man/systemd-nspawn.1 \
 	man/systemd-path.1 \
@@ -259,7 +255,6 @@ MANPAGES_ALIAS += \
 	man/SD_WARNING.3 \
 	man/init.1 \
 	man/journald.conf.d.5 \
-	man/libnss_systemd.so.2.8 \
 	man/poweroff.8 \
 	man/reboot.8 \
 	man/sd_bus_creds_get_audit_login_uid.3 \
@@ -334,23 +329,6 @@ MANPAGES_ALIAS += \
 	man/sd_bus_path_encode_many.3 \
 	man/sd_bus_ref.3 \
 	man/sd_bus_release_name.3 \
-	man/sd_bus_track_add_sender.3 \
-	man/sd_bus_track_contains.3 \
-	man/sd_bus_track_count.3 \
-	man/sd_bus_track_count_name.3 \
-	man/sd_bus_track_count_sender.3 \
-	man/sd_bus_track_first.3 \
-	man/sd_bus_track_get_bus.3 \
-	man/sd_bus_track_get_recursive.3 \
-	man/sd_bus_track_get_userdata.3 \
-	man/sd_bus_track_next.3 \
-	man/sd_bus_track_ref.3 \
-	man/sd_bus_track_remove_name.3 \
-	man/sd_bus_track_remove_sender.3 \
-	man/sd_bus_track_set_recursive.3 \
-	man/sd_bus_track_set_userdata.3 \
-	man/sd_bus_track_unref.3 \
-	man/sd_bus_track_unrefp.3 \
 	man/sd_bus_unref.3 \
 	man/sd_bus_unrefp.3 \
 	man/sd_event.3 \
@@ -609,7 +587,6 @@ man/SD_NOTICE.3: man/sd-daemon.3
 man/SD_WARNING.3: man/sd-daemon.3
 man/init.1: man/systemd.1
 man/journald.conf.d.5: man/journald.conf.5
-man/libnss_systemd.so.2.8: man/nss-systemd.8
 man/poweroff.8: man/halt.8
 man/reboot.8: man/halt.8
 man/sd_bus_creds_get_audit_login_uid.3: man/sd_bus_creds_get_pid.3
@@ -684,23 +661,6 @@ man/sd_bus_path_decode_many.3: man/sd_bus_path_encode.3
 man/sd_bus_path_encode_many.3: man/sd_bus_path_encode.3
 man/sd_bus_ref.3: man/sd_bus_new.3
 man/sd_bus_release_name.3: man/sd_bus_request_name.3
-man/sd_bus_track_add_sender.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_contains.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_count.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_count_name.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_count_sender.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_first.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_get_bus.3: man/sd_bus_track_new.3
-man/sd_bus_track_get_recursive.3: man/sd_bus_track_new.3
-man/sd_bus_track_get_userdata.3: man/sd_bus_track_new.3
-man/sd_bus_track_next.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_ref.3: man/sd_bus_track_new.3
-man/sd_bus_track_remove_name.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_remove_sender.3: man/sd_bus_track_add_name.3
-man/sd_bus_track_set_recursive.3: man/sd_bus_track_new.3
-man/sd_bus_track_set_userdata.3: man/sd_bus_track_new.3
-man/sd_bus_track_unref.3: man/sd_bus_track_new.3
-man/sd_bus_track_unrefp.3: man/sd_bus_track_new.3
 man/sd_bus_unref.3: man/sd_bus_new.3
 man/sd_bus_unrefp.3: man/sd_bus_new.3
 man/sd_event.3: man/sd_event_new.3
@@ -1111,9 +1071,6 @@ man/init.html: man/systemd.html
 man/journald.conf.d.html: man/journald.conf.html
 	$(html-alias)
 
-man/libnss_systemd.so.2.html: man/nss-systemd.html
-	$(html-alias)
-
 man/poweroff.html: man/halt.html
 	$(html-alias)
 
@@ -1334,57 +1291,6 @@ man/sd_bus_ref.html: man/sd_bus_new.html
 	$(html-alias)
 
 man/sd_bus_release_name.html: man/sd_bus_request_name.html
-	$(html-alias)
-
-man/sd_bus_track_add_sender.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_contains.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_count.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_count_name.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_count_sender.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_first.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_get_bus.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_get_recursive.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_get_userdata.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_next.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_ref.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_remove_name.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_remove_sender.html: man/sd_bus_track_add_name.html
-	$(html-alias)
-
-man/sd_bus_track_set_recursive.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_set_userdata.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_unref.html: man/sd_bus_track_new.html
-	$(html-alias)
-
-man/sd_bus_track_unrefp.html: man/sd_bus_track_new.html
 	$(html-alias)
 
 man/sd_bus_unref.html: man/sd_bus_new.html
@@ -2613,7 +2519,6 @@ EXTRA_DIST += \
 	man/nss-myhostname.xml \
 	man/nss-mymachines.xml \
 	man/nss-resolve.xml \
-	man/nss-systemd.xml \
 	man/os-release.xml \
 	man/pam_systemd.xml \
 	man/resolved.conf.xml \
@@ -2646,8 +2551,6 @@ EXTRA_DIST += \
 	man/sd_bus_path_encode.xml \
 	man/sd_bus_process.xml \
 	man/sd_bus_request_name.xml \
-	man/sd_bus_track_add_name.xml \
-	man/sd_bus_track_new.xml \
 	man/sd_event_add_child.xml \
 	man/sd_event_add_defer.xml \
 	man/sd_event_add_io.xml \
@@ -2741,7 +2644,6 @@ EXTRA_DIST += \
 	man/systemd-machine-id-setup.xml \
 	man/systemd-machined.service.xml \
 	man/systemd-modules-load.service.xml \
-	man/systemd-mount.xml \
 	man/systemd-networkd-wait-online.service.xml \
 	man/systemd-networkd.service.xml \
 	man/systemd-notify.xml \

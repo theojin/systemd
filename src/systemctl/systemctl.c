@@ -2720,10 +2720,9 @@ static int start_unit_one(
 
                 if (!sd_bus_error_has_name(error, BUS_ERROR_NO_SUCH_UNIT) &&
                     !sd_bus_error_has_name(error, BUS_ERROR_UNIT_MASKED))
-                        log_error("See %s logs and 'systemctl%s status%s %s' for details.",
+                        log_error("See %s logs and 'systemctl%s status %s' for details.",
                                    arg_scope == UNIT_FILE_SYSTEM ? "system" : "user",
                                    arg_scope == UNIT_FILE_SYSTEM ? "" : " --user",
-                                   name[0] == '-' ? " --" : "",
                                    name);
 
                 return r;
@@ -3385,9 +3384,9 @@ static int kill_unit(int argc, char *argv[], void *userdata) {
                                 "KillUnit",
                                 &error,
                                 NULL,
-                                "ssi", *name, kill_who ? kill_who : arg_kill_who, arg_signal);
+                                "ssi", *names, kill_who ? kill_who : arg_kill_who, arg_signal);
                 if (q < 0) {
-                        log_error_errno(q, "Failed to kill unit %s: %s", *name, bus_error_message(&error, q));
+                        log_error_errno(q, "Failed to kill unit %s: %s", *names, bus_error_message(&error, q));
                         if (r == 0)
                                 r = q;
                 }
@@ -3572,7 +3571,6 @@ typedef struct UnitStatusInfo {
         uint64_t memory_low;
         uint64_t memory_high;
         uint64_t memory_max;
-        uint64_t memory_swap_max;
         uint64_t memory_limit;
         uint64_t cpu_usage_nsec;
         uint64_t tasks_current;
@@ -3885,8 +3883,7 @@ static void print_status_info(
 
                 printf("   Memory: %s", format_bytes(buf, sizeof(buf), i->memory_current));
 
-                if (i->memory_low > 0 || i->memory_high != CGROUP_LIMIT_MAX ||
-                    i->memory_max != CGROUP_LIMIT_MAX || i->memory_swap_max != CGROUP_LIMIT_MAX ||
+                if (i->memory_low > 0 || i->memory_high != CGROUP_LIMIT_MAX || i->memory_max != CGROUP_LIMIT_MAX ||
                     i->memory_limit != CGROUP_LIMIT_MAX) {
                         const char *prefix = "";
 
@@ -3901,10 +3898,6 @@ static void print_status_info(
                         }
                         if (i->memory_max != CGROUP_LIMIT_MAX) {
                                 printf("%smax: %s", prefix, format_bytes(buf, sizeof(buf), i->memory_max));
-                                prefix = " ";
-                        }
-                        if (i->memory_swap_max != CGROUP_LIMIT_MAX) {
-                                printf("%sswap max: %s", prefix, format_bytes(buf, sizeof(buf), i->memory_swap_max));
                                 prefix = " ";
                         }
                         if (i->memory_limit != CGROUP_LIMIT_MAX) {
@@ -4147,8 +4140,6 @@ static int status_property(const char *name, sd_bus_message *m, UnitStatusInfo *
                         i->memory_high = u;
                 else if (streq(name, "MemoryMax"))
                         i->memory_max = u;
-                else if (streq(name, "MemorySwapMax"))
-                        i->memory_swap_max = u;
                 else if (streq(name, "MemoryLimit"))
                         i->memory_limit = u;
                 else if (streq(name, "TasksCurrent"))
@@ -4664,7 +4655,6 @@ static int show_one(
                 .memory_current = (uint64_t) -1,
                 .memory_high = CGROUP_LIMIT_MAX,
                 .memory_max = CGROUP_LIMIT_MAX,
-                .memory_swap_max = CGROUP_LIMIT_MAX,
                 .memory_limit = (uint64_t) -1,
                 .cpu_usage_nsec = (uint64_t) -1,
                 .tasks_current = (uint64_t) -1,
@@ -4777,7 +4767,7 @@ static int show_one(
         else if (streq(verb, "status")) {
                 print_status_info(bus, &info, ellipsized);
 
-                if (info.active_state && !STR_IN_SET(info.active_state, "active", "reloading"))
+                if (info.active_state && STR_IN_SET(info.active_state, "inactive", "failed"))
                         r = EXIT_PROGRAM_NOT_RUNNING;
                 else
                         r = EXIT_PROGRAM_RUNNING_OR_SERVICE_OK;
@@ -5103,6 +5093,7 @@ static int set_property(int argc, char *argv[], void *userdata) {
         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
         _cleanup_free_ char *n = NULL;
         sd_bus *bus;
+        char **i;
         int r;
 
         r = acquire_bus(BUS_MANAGER, &bus);
@@ -5133,9 +5124,11 @@ static int set_property(int argc, char *argv[], void *userdata) {
         if (r < 0)
                 return bus_log_create_error(r);
 
-        r = bus_append_unit_property_assignment_many(m, strv_skip(argv, 2));
-        if (r < 0)
-                return r;
+        STRV_FOREACH(i, strv_skip(argv, 2)) {
+                r = bus_append_unit_property_assignment(m, *i);
+                if (r < 0)
+                        return r;
+        }
 
         r = sd_bus_message_close_container(m);
         if (r < 0)
@@ -5573,12 +5566,10 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_sysv)
                         continue;
 
-                if (!arg_quiet) {
-                        if (found_native)
-                                log_info("Synchronizing state of %s with SysV service script with %s.", name, argv[0]);
-                        else
-                                log_info("%s is not a native service, redirecting to systemd-sysv-install.", name);
-                }
+                if (found_native)
+                        log_info("Synchronizing state of %s with SysV service script with %s.", name, argv[0]);
+                else
+                        log_info("%s is not a native service, redirecting to systemd-sysv-install.", name);
 
                 if (!isempty(arg_root))
                         argv[c++] = q = strappend("--root=", arg_root);
@@ -5679,29 +5670,6 @@ static int mangle_names(char **original_names, char ***mangled_names) {
         return 0;
 }
 
-static int normalize_names(char **names, bool warn_if_path) {
-        char **u;
-        bool was_path = false;
-
-        STRV_FOREACH(u, names) {
-                int r;
-
-                if (!is_path(*u))
-                        continue;
-
-                r = free_and_strdup(u, basename(*u));
-                if (r < 0)
-                        return log_error_errno(r, "Failed to normalize unit file path: %m");
-
-                was_path = true;
-        }
-
-        if (warn_if_path && was_path)
-                log_warning("Warning: Can't execute disable on the unit file path. Proceeding with the unit name.");
-
-        return 0;
-}
-
 static int unit_exists(const char *unit) {
         _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -5767,12 +5735,6 @@ static int enable_unit(int argc, char *argv[], void *userdata) {
                 if (arg_no_reload || install_client_side())
                         return 0;
                 return daemon_reload(argc, argv, userdata);
-        }
-
-        if (streq(verb, "disable")) {
-                r = normalize_names(names, true);
-                if (r < 0)
-                        return r;
         }
 
         if (install_client_side()) {
@@ -6598,9 +6560,9 @@ static void systemctl_help(void) {
                "     --preset-mode=   Apply only enable, only disable, or all presets\n"
                "     --root=PATH      Enable unit files in the specified root directory\n"
                "  -n --lines=INTEGER  Number of journal entries to show\n"
-               "  -o --output=STRING  Change journal output mode (short, short-precise,\n"
-               "                             short-iso, short-full, short-monotonic, short-unix,\n"
-               "                             verbose, export, json, json-pretty, json-sse, cat)\n"
+               "  -o --output=STRING  Change journal output mode (short, short-iso,\n"
+               "                              short-precise, short-monotonic, verbose,\n"
+               "                              export, json, json-pretty, json-sse, cat)\n"
                "     --firmware-setup Tell the firmware to show the setup menu on next boot\n"
                "     --plain          Print unit dependencies as a list instead of a tree\n\n"
                "Unit Commands:\n"

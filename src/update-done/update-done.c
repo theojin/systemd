@@ -23,57 +23,67 @@
 #include "util.h"
 
 #define MESSAGE                                                         \
-        "# This file was created by systemd-update-done. Its only \n"   \
-        "# purpose is to hold a timestamp of the time this directory\n" \
-        "# was updated. See systemd-update-done.service(8).\n"
+        "This file was created by systemd-update-done. Its only \n"     \
+        "purpose is to hold a timestamp of the time this directory\n"   \
+        "was updated. See systemd-update-done.service(8).\n"
 
 static int apply_timestamp(const char *path, struct timespec *ts) {
         struct timespec twice[2] = {
                 *ts,
                 *ts
         };
-        int fd = -1;
-        _cleanup_fclose_ FILE *f = NULL;
-        int r;
+        struct stat st;
 
         assert(path);
         assert(ts);
 
-        /*
-         * We store the timestamp both as mtime of the file and in the file itself,
-         * to support filesystems which cannot store nanosecond-precision timestamps.
-         * Hence, don't bother updating the file, let's just rewrite it.
-         */
+        if (stat(path, &st) >= 0) {
+                /* Is the timestamp file already newer than the OS? If
+                 * so, there's nothing to do. We ignore the nanosecond
+                 * component of the timestamp, since some file systems
+                 * do not support any better accuracy than 1s and we
+                 * have no way to identify the accuracy
+                 * available. Most notably ext4 on small disks (where
+                 * 128 byte inodes are used) does not support better
+                 * accuracy than 1s. */
+                if (st.st_mtim.tv_sec > ts->tv_sec)
+                        return 0;
 
-        r = mac_selinux_create_file_prepare(path, S_IFREG);
-        if (r < 0)
-                return log_error_errno(r, "Failed to set SELinux context for %s: %m", path);
+                /* It is older? Then let's update it */
+                if (utimensat(AT_FDCWD, path, twice, AT_SYMLINK_NOFOLLOW) < 0) {
 
-        fd = open(path, O_CREAT|O_WRONLY|O_TRUNC|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW, 0644);
-        mac_selinux_create_file_clear();
+                        if (errno == EROFS)
+                                return log_debug("Can't update timestamp file %s, file system is read-only.", path);
 
-        if (fd < 0) {
-                if (errno == EROFS)
-                        return log_debug("Can't create timestamp file %s, file system is read-only.", path);
+                        return log_error_errno(errno, "Failed to update timestamp on %s: %m", path);
+                }
 
-                return log_error_errno(errno, "Failed to create/open timestamp file %s: %m", path);
-        }
+        } else if (errno == ENOENT) {
+                _cleanup_close_ int fd = -1;
+                int r;
 
-        f = fdopen(fd, "w");
-        if (!f) {
-                safe_close(fd);
-                return log_error_errno(errno, "Failed to fdopen() timestamp file %s: %m", path);
-        }
+                /* The timestamp file doesn't exist yet? Then let's create it. */
 
-        (void) fprintf(f,
-                       "%s"
-                       "TimestampNSec=" NSEC_FMT "\n",
-                       MESSAGE, timespec_load_nsec(ts));
+                r = mac_selinux_create_file_prepare(path, S_IFREG);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to set SELinux context for %s: %m", path);
 
-        fflush(f);
+                fd = open(path, O_CREAT|O_EXCL|O_WRONLY|O_TRUNC|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW, 0644);
+                mac_selinux_create_file_clear();
 
-        if (futimens(fd, twice) < 0)
-                return log_error_errno(errno, "Failed to update timestamp on %s: %m", path);
+                if (fd < 0) {
+                        if (errno == EROFS)
+                                return log_debug("Can't create timestamp file %s, file system is read-only.", path);
+
+                        return log_error_errno(errno, "Failed to create timestamp file %s: %m", path);
+                }
+
+                (void) loop_write(fd, MESSAGE, strlen(MESSAGE), false);
+
+                if (futimens(fd, twice) < 0)
+                        return log_error_errno(errno, "Failed to update timestamp on %s: %m", path);
+        } else
+                log_error_errno(errno, "Failed to stat() timestamp file %s: %m", path);
 
         return 0;
 }

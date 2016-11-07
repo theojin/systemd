@@ -156,10 +156,6 @@
 
           <para>To list all units installed in the file system, use the
           <command>list-unit-files</command> command instead.</para>
-
-          <para>When listing units with <command>list-dependencies</command>, recursively show
-          dependencies of all dependent units (by default only dependencies of target units are
-          shown).</para>
         </listitem>
       </varlistentry>
 
@@ -642,13 +638,13 @@
           <term><command>list-units <optional><replaceable>PATTERN</replaceable>...</optional></command></term>
 
           <listitem>
-            <para>List units that <command>systemd</command> has loaded. This includes units that are either referenced
-            directly or through a dependency, units that are pinned by applications programmatically, or units that
-            were active in the past and have failed. By default only units which are active, have pending jobs, or have
+            <para>List units that <command>systemd</command> has loaded. This includes units that
+            are either referenced directly or through a dependency, or units that were active in the
+            past and have failed. By default only units which are active, have pending jobs, or have
             failed are shown; this can be changed with option <option>--all</option>. If one or more
-            <replaceable>PATTERN</replaceable>s are specified, only units matching one of them are shown. The units
-            that are shown are additionally filtered by <option>--type=</option> and <option>--state=</option> if those
-            options are specified.</para>
+            <replaceable>PATTERN</replaceable>s are specified, only units matching one of them are
+            shown. The units that are shown are additionally filtered by <option>--type=</option>
+            and <option>--state=</option> if those options are specified.</para>
 
             <para>This is the default command.</para>
           </listitem>
@@ -1073,8 +1069,8 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
           <listitem>
             <para>Reenable one or more units, as specified on the command line. This is a combination of
             <command>disable</command> and <command>enable</command> and is useful to reset the symlinks a unit file is
-            enabled with to the defaults configured in its <literal>[Install]</literal> section. This command expects
-            a unit name only, it does not accept paths to unit files.</para>
+            enabled with to the defaults configured in its <literal>[Install]</literal> section. This commands expects
+            a unit uname only, it does not accept paths to unit files.</para>
           </listitem>
         </varlistentry>
 
@@ -1092,8 +1088,7 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
             enabled and disabled, or only enabled, or only disabled.</para>
 
             <para>If the unit carries no install information, it will be silently ignored
-            by this command. <replaceable>NAME</replaceable> must be the real unit name,
-            any alias names are ignored silently.</para>
+            by this command.</para>
 
             <para>For more information on the preset policy format, see
             <citerefentry><refentrytitle>systemd.preset</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
@@ -1681,15 +1676,20 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
           <term><command>switch-root <replaceable>ROOT</replaceable> <optional><replaceable>INIT</replaceable></optional></command></term>
 
           <listitem>
-            <para>Switches to a different root directory and executes a new system manager process below it. This is
-            intended for usage in initial RAM disks ("initrd"), and will transition from the initrd's system manager
-            process (a.k.a. "init" process) to the main system manager process which is loaded from the actual host
-            volume. This call takes two arguments: the directory that is to become the new root directory, and the path
-            to the new system manager binary below it to execute as PID 1. If the latter is omitted or the empty
-            string, a systemd binary will automatically be searched for and used as init. If the system manager path is
-            omitted, equal to the empty string or identical to the path to the systemd binary, the state of the
-            initrd's system manager process is passed to the main system manager, which allows later introspection of
-            the state of the services involved in the initrd boot phase.</para>
+            <para>Switches to a different root directory and executes a
+            new system manager process below it. This is intended for
+            usage in initial RAM disks ("initrd"), and will transition
+            from the initrd's system manager process (a.k.a. "init"
+            process) to the main system manager process. This call takes two
+            arguments: the directory that is to become the new root directory, and
+            the path to the new system manager binary below it to
+            execute as PID 1. If the latter is omitted or the empty
+            string, a systemd binary will automatically be searched for
+            and used as init. If the system manager path is omitted or
+            equal to the empty string, the state of the initrd's system
+            manager process is passed to the main system manager, which
+            allows later introspection of the state of the services
+            involved in the initrd boot.</para>
           </listitem>
         </varlistentry>
 

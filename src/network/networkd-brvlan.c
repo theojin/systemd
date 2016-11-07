@@ -257,24 +257,6 @@ static int parse_vid_range(const char *rvalue, uint16_t *vid, uint16_t *vid_end)
         return r;
 }
 
-int config_parse_brvlan_pvid(const char *unit, const char *filename,
-                             unsigned line, const char *section,
-                             unsigned section_line, const char *lvalue,
-                             int ltype, const char *rvalue, void *data,
-                             void *userdata) {
-        Network *network = userdata;
-        int r;
-        uint16_t pvid;
-        r = parse_vlanid(rvalue, &pvid);
-        if (r < 0)
-                return r;
-
-        network->pvid = pvid;
-        network->use_br_vlan = true;
-
-        return 0;
-}
-
 int config_parse_brvlan_vlan(const char *unit, const char *filename,
                              unsigned line, const char *section,
                              unsigned section_line, const char *lvalue,
@@ -306,7 +288,6 @@ int config_parse_brvlan_vlan(const char *unit, const char *filename,
                 for (; vid <= vid_end; vid++)
                         set_bit(vid, network->br_vid_bitmap);
         }
-        network->use_br_vlan = true;
         return 0;
 }
 
@@ -344,6 +325,5 @@ int config_parse_brvlan_untagged(const char *unit, const char *filename,
                         set_bit(vid, network->br_untagged_bitmap);
                 }
         }
-        network->use_br_vlan = true;
         return 0;
 }

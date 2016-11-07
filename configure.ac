@@ -211,12 +211,9 @@ AS_CASE([$CC], [*clang*],
                -Wno-gnu-variable-sized-type-not-at-end \
         ])])
 
-AC_ARG_ENABLE([lto], [AS_HELP_STRING([--disable-lto], [disable -flto])],
-                     [], [enable_lto=yes])
 AS_CASE([$CFLAGS], [*-O[[12345sz\ ]]*],
-        [AS_IF([test "x$enable_lto" = "xyes"],
-               [CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [-flto])],
-               [AC_MSG_RESULT([disabling -flto as requested])])],
+        [CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [\
+               -flto])],
         [AC_MSG_RESULT([skipping -flto, optimization not enabled])])
 AC_SUBST([OUR_CFLAGS], "$with_cflags $sanitizer_cflags")
 
@@ -556,29 +553,11 @@ AC_SUBST(CERTIFICATEROOT)
 
 AC_ARG_WITH([support-url],
         AS_HELP_STRING([--with-support-url=URL],
-                [Specify the support URL to show in catalog entries included in systemd]),
+                [Specify the supoport URL to show in catalog entries included in systemd]),
         [SUPPORT_URL="$withval"],
         [SUPPORT_URL=http://lists.freedesktop.org/mailman/listinfo/systemd-devel])
 
 AC_SUBST(SUPPORT_URL)
-
-AC_ARG_WITH([nobody-user],
-        AS_HELP_STRING([--with-nobody-user=NAME],
-                [Specify the name of the nobody user (the one with UID 65534)]),
-        [NOBODY_USER_NAME="$withval"],
-        [NOBODY_USER_NAME=nobody])
-
-AC_SUBST(NOBODY_USER_NAME)
-AC_DEFINE_UNQUOTED(NOBODY_USER_NAME, ["$NOBODY_USER_NAME"], [The name of the nobody user (the one with UID 65534)])
-
-AC_ARG_WITH([nobody-group],
-        AS_HELP_STRING([--with-nobody-group=NAME],
-                [Specify the name of the nobody group (the one with GID 65534)]),
-        [NOBODY_GROUP_NAME="$withval"],
-        [NOBODY_GROUP_NAME=nobody])
-
-AC_SUBST(NOBODY_GROUP_NAME)
-AC_DEFINE_UNQUOTED(NOBODY_GROUP_NAME, ["$NOBODY_GROUP_NAME"], [The name of the nobody group (the one with GID 65534)])
 
 # ------------------------------------------------------------------------------
 have_xz=no
@@ -1220,9 +1199,9 @@ AM_CONDITIONAL(ENABLE_NETWORKD, [test "x$have_networkd" = "xyes"])
 
 # ------------------------------------------------------------------------------
 have_efi=no
-AC_ARG_ENABLE(efi, AS_HELP_STRING([--disable-efi], [disable systemd-boot and bootctl (EFI support)]))
+AC_ARG_ENABLE(efi, AS_HELP_STRING([--disable-efi], [disable EFI support]))
 if test "x$enable_efi" != "xno"; then
-        AC_DEFINE(ENABLE_EFI, 1, [Define if systemd-boot and bootctl are to be enabled])
+        AC_DEFINE(ENABLE_EFI, 1, [Define if EFI support is to be enabled])
         have_efi=yes
 fi
 AM_CONDITIONAL(ENABLE_EFI, [test "x$have_efi" = "xyes"])
@@ -1656,6 +1635,7 @@ AC_MSG_RESULT([
         nss-myhostname:                    ${have_myhostname}
         hwdb:                              ${enable_hwdb}
         tpm:                               ${have_tpm}
+        kdbus:                             ${have_kdbus}
         Python:                            ${have_python}
         man pages:                         ${have_manpages}
         test coverage:                     ${have_coverage}
@@ -1694,8 +1674,6 @@ AC_MSG_RESULT([
         Maximum System GID:                ${SYSTEM_GID_MAX}
         Certificate root:                  ${CERTIFICATEROOT}
         Support URL:                       ${SUPPORT_URL}
-        Nobody User Name:                  ${NOBODY_USER_NAME}
-        Nobody Group Name:                 ${NOBODY_GROUP_NAME}
 
         CFLAGS:   ${OUR_CFLAGS} ${CFLAGS}
         CPPFLAGS: ${OUR_CPPFLAGS} ${CPPFLAGS}

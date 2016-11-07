@@ -30,7 +30,6 @@
 #include "compress.h"
 #include "fd-util.h"
 #include "fileio.h"
-#include "fs-util.h"
 #include "journal-internal.h"
 #include "log.h"
 #include "macro.h"
@@ -610,17 +609,11 @@ static int save_core(sd_journal *j, int fd, char **path, bool *unlink_temp) {
                 char *temp = NULL;
 
                 if (fd < 0) {
-                        const char *vt;
-
-                        r = var_tmp_dir(&vt);
-                        if (r < 0)
-                                return log_error_errno(r, "Failed to acquire temporary directory path: %m");
-
-                        temp = strjoin(vt, "/coredump-XXXXXX", NULL);
+                        temp = strdup("/var/tmp/coredump-XXXXXX");
                         if (!temp)
                                 return log_oom();
 
-                        fdt = mkostemp_safe(temp);
+                        fdt = mkostemp_safe(temp, O_WRONLY|O_CLOEXEC);
                         if (fdt < 0)
                                 return log_error_errno(fdt, "Failed to create temporary file: %m");
                         log_debug("Created temporary file %s", temp);

@@ -128,7 +128,7 @@ static int parse_config(void) {
                 {}
         };
 
-        return config_parse_many_nulstr(PKGSYSCONFDIR "/coredump.conf",
+        return config_parse_many(PKGSYSCONFDIR "/coredump.conf",
                                  CONF_PATHS_NULSTR("systemd/coredump.conf.d"),
                                  "Coredump\0",
                                  config_item_table_lookup, items,
@@ -327,11 +327,9 @@ static int save_external_coredump(
         r = safe_atou64(context[CONTEXT_RLIMIT], &rlimit);
         if (r < 0)
                 return log_error_errno(r, "Failed to parse resource limit: %s", context[CONTEXT_RLIMIT]);
-        if (rlimit < page_size()) {
-                /* Is coredumping disabled? Then don't bother saving/processing the coredump.
-                 * Anything below PAGE_SIZE cannot give a readable coredump (the kernel uses
-                 * ELF_EXEC_PAGESIZE which is not easily accessible, but is usually the same as PAGE_SIZE. */
-                log_info("Core dumping has been disabled for process %s (%s).", context[CONTEXT_PID], context[CONTEXT_COMM]);
+        if (rlimit <= 0) {
+                /* Is coredumping disabled? Then don't bother saving/processing the coredump */
+                log_info("Core Dumping has been disabled for process %s (%s).", context[CONTEXT_PID], context[CONTEXT_COMM]);
                 return -EBADSLT;
         }
 
@@ -558,89 +556,6 @@ static int compose_open_fds(pid_t pid, char **open_fds) {
         buffer = NULL;
 
         return 0;
-}
-
-static int get_process_ns(pid_t pid, const char *namespace, ino_t *ns) {
-        const char *p;
-        struct stat stbuf;
-        _cleanup_close_ int proc_ns_dir_fd;
-
-        p = procfs_file_alloca(pid, "ns");
-
-        proc_ns_dir_fd = open(p, O_DIRECTORY | O_CLOEXEC | O_RDONLY);
-        if (proc_ns_dir_fd < 0)
-                return -errno;
-
-        if (fstatat(proc_ns_dir_fd, namespace, &stbuf, /* flags */0) < 0)
-                return -errno;
-
-        *ns = stbuf.st_ino;
-        return 0;
-}
-
-static int get_mount_namespace_leader(pid_t pid, pid_t *container_pid) {
-        pid_t cpid = pid, ppid = 0;
-        ino_t proc_mntns;
-        int r = 0;
-
-        r = get_process_ns(pid, "mnt", &proc_mntns);
-        if (r < 0)
-                return r;
-
-        while (1) {
-                ino_t parent_mntns;
-
-                r = get_process_ppid(cpid, &ppid);
-                if (r < 0)
-                        return r;
-
-                r = get_process_ns(ppid, "mnt", &parent_mntns);
-                if (r < 0)
-                        return r;
-
-                if (proc_mntns != parent_mntns)
-                        break;
-
-                if (ppid == 1)
-                        return -ENOENT;
-
-                cpid = ppid;
-        }
-
-        *container_pid = ppid;
-        return 0;
-}
-
-/* Returns 1 if the parent was found.
- * Returns 0 if there is not a process we can call the pid's
- * container parent (the pid's process isn't 'containerized').
- * Returns a negative number on errors.
- */
-static int get_process_container_parent_cmdline(pid_t pid, char** cmdline) {
-        int r = 0;
-        pid_t container_pid;
-        const char *proc_root_path;
-        struct stat root_stat, proc_root_stat;
-
-        /* To compare inodes of / and /proc/[pid]/root */
-        if (stat("/", &root_stat) < 0)
-                return -errno;
-
-        proc_root_path = procfs_file_alloca(pid, "root");
-        if (stat(proc_root_path, &proc_root_stat) < 0)
-                return -errno;
-
-        /* The process uses system root. */
-        if (proc_root_stat.st_ino == root_stat.st_ino) {
-                *cmdline = NULL;
-                return 0;
-        }
-
-        r = get_mount_namespace_leader(pid, &container_pid);
-        if (r < 0)
-                return r;
-
-        return get_process_cmdline(container_pid, 0, false, cmdline);
 }
 
 static int change_uid_gid(const char *context[]) {
@@ -1018,13 +933,11 @@ static int process_kernel(int argc, char* argv[]) {
         /* The larger ones we allocate on the heap */
         _cleanup_free_ char
                 *core_owner_uid = NULL, *core_open_fds = NULL, *core_proc_status = NULL,
-                *core_proc_maps = NULL, *core_proc_limits = NULL, *core_proc_cgroup = NULL, *core_environ = NULL,
-                *core_proc_mountinfo = NULL, *core_container_cmdline = NULL;
+                *core_proc_maps = NULL, *core_proc_limits = NULL, *core_proc_cgroup = NULL, *core_environ = NULL;
 
         _cleanup_free_ char *exe = NULL, *comm = NULL;
         const char *context[_CONTEXT_MAX];
-        bool proc_self_root_is_slash;
-        struct iovec iovec[27];
+        struct iovec iovec[25];
         size_t n_iovec = 0;
         uid_t owner_uid;
         const char *p;
@@ -1197,15 +1110,6 @@ static int process_kernel(int argc, char* argv[]) {
                         IOVEC_SET_STRING(iovec[n_iovec++], core_proc_cgroup);
         }
 
-        p = procfs_file_alloca(pid, "mountinfo");
-        if (read_full_file(p, &t, NULL) >=0) {
-                core_proc_mountinfo = strappend("COREDUMP_PROC_MOUNTINFO=", t);
-                free(t);
-
-                if (core_proc_mountinfo)
-                        IOVEC_SET_STRING(iovec[n_iovec++], core_proc_mountinfo);
-        }
-
         if (get_process_cwd(pid, &t) >= 0) {
                 core_cwd = strjoina("COREDUMP_CWD=", t);
                 free(t);
@@ -1215,20 +1119,9 @@ static int process_kernel(int argc, char* argv[]) {
 
         if (get_process_root(pid, &t) >= 0) {
                 core_root = strjoina("COREDUMP_ROOT=", t);
+                free(t);
 
                 IOVEC_SET_STRING(iovec[n_iovec++], core_root);
-
-                /* If the process' root is "/", then there is a chance it has
-                 * mounted own root and hence being containerized. */
-                proc_self_root_is_slash = strcmp(t, "/") == 0;
-                free(t);
-                if (proc_self_root_is_slash && get_process_container_parent_cmdline(pid, &t) > 0) {
-                        core_container_cmdline = strappend("COREDUMP_CONTAINER_CMDLINE=", t);
-                        free(t);
-
-                        if (core_container_cmdline)
-                                IOVEC_SET_STRING(iovec[n_iovec++], core_container_cmdline);
-                }
         }
 
         if (get_process_environ(pid, &t) >= 0) {

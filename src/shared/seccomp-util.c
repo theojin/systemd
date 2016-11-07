@@ -20,8 +20,6 @@
 #include <errno.h>
 #include <seccomp.h>
 #include <stddef.h>
-#include <sys/prctl.h>
-#include <linux/seccomp.h>
 
 #include "macro.h"
 #include "seccomp-util.h"
@@ -91,25 +89,6 @@ int seccomp_add_secondary_archs(scmp_filter_ctx *c) {
 
 }
 
-static bool is_basic_seccomp_available(void) {
-        int r;
-        r = prctl(PR_GET_SECCOMP, 0, 0, 0, 0);
-        return r >= 0;
-}
-
-static bool is_seccomp_filter_available(void) {
-        int r;
-        r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, NULL, 0, 0);
-        return r < 0 && errno == EFAULT;
-}
-
-bool is_seccomp_available(void) {
-        static int cached_enabled = -1;
-        if (cached_enabled < 0)
-                cached_enabled = is_basic_seccomp_available() && is_seccomp_filter_available();
-        return cached_enabled;
-}
-
 const SystemCallFilterSet syscall_filter_sets[] = {
         {
                 /* Clock */
@@ -148,7 +127,6 @@ const SystemCallFilterSet syscall_filter_sets[] = {
                 "execve\0"
                 "exit\0"
                 "exit_group\0"
-                "getrlimit\0"      /* make sure processes can query stack size and such */
                 "rt_sigreturn\0"
                 "sigreturn\0"
         }, {

@@ -20,6 +20,7 @@
 #include <sys/mount.h>
 
 #include "alloc-util.h"
+#include "cgroup-util.h"
 #include "fd-util.h"
 #include "fileio.h"
 #include "mkdir.h"
@@ -62,18 +63,18 @@ int chown_cgroup(pid_t pid, uid_t uid_shift) {
         return 0;
 }
 
-int sync_cgroup(pid_t pid, CGroupUnified unified_requested) {
+int sync_cgroup(pid_t pid, bool unified_requested) {
         _cleanup_free_ char *cgroup = NULL;
         char tree[] = "/tmp/unifiedXXXXXX", pid_string[DECIMAL_STR_MAX(pid) + 1];
         bool undo_mount = false;
         const char *fn;
         int unified, r;
 
-        unified = cg_unified(SYSTEMD_CGROUP_CONTROLLER);
+        unified = cg_unified();
         if (unified < 0)
                 return log_error_errno(unified, "Failed to determine whether the unified hierarchy is used: %m");
 
-        if ((unified > 0) == (unified_requested >= CGROUP_UNIFIED_SYSTEMD))
+        if ((unified > 0) == unified_requested)
                 return 0;
 
         /* When the host uses the legacy cgroup setup, but the
@@ -116,7 +117,7 @@ finish:
         return r;
 }
 
-int create_subcgroup(pid_t pid, CGroupUnified unified_requested) {
+int create_subcgroup(pid_t pid, bool unified_requested) {
         _cleanup_free_ char *cgroup = NULL;
         const char *child;
         int unified, r;
@@ -128,10 +129,10 @@ int create_subcgroup(pid_t pid, CGroupUnified unified_requested) {
          * did not create a scope unit for the container move us and
          * the container into two separate subcgroups. */
 
-        if (unified_requested == CGROUP_UNIFIED_NONE)
+        if (!unified_requested)
                 return 0;
 
-        unified = cg_unified(SYSTEMD_CGROUP_CONTROLLER);
+        unified = cg_unified();
         if (unified < 0)
                 return log_error_errno(unified, "Failed to determine whether the unified hierarchy is used: %m");
         if (unified == 0)

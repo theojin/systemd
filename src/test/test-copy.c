@@ -42,11 +42,11 @@ static void test_copy_file(void) {
 
         log_info("%s", __func__);
 
-        fd = mkostemp_safe(fn);
+        fd = mkostemp_safe(fn, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         close(fd);
 
-        fd = mkostemp_safe(fn_copy);
+        fd = mkostemp_safe(fn_copy, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         close(fd);
 
@@ -71,9 +71,9 @@ static void test_copy_file_fd(void) {
 
         log_info("%s", __func__);
 
-        in_fd = mkostemp_safe(in_fn);
+        in_fd = mkostemp_safe(in_fn, O_RDWR);
         assert_se(in_fd >= 0);
-        out_fd = mkostemp_safe(out_fn);
+        out_fd = mkostemp_safe(out_fn, O_RDWR);
         assert_se(out_fd >= 0);
 
         assert_se(write_string_file(in_fn, text, WRITE_STRING_FILE_CREATE) == 0);
@@ -207,10 +207,10 @@ static void test_copy_bytes_regular_file(const char *src, bool try_reflink, uint
         fd = open(src, O_RDONLY | O_CLOEXEC | O_NOCTTY);
         assert_se(fd >= 0);
 
-        fd2 = mkostemp_safe(fn2);
+        fd2 = mkostemp_safe(fn2, O_RDWR);
         assert_se(fd2 >= 0);
 
-        fd3 = mkostemp_safe(fn3);
+        fd3 = mkostemp_safe(fn3, O_WRONLY);
         assert_se(fd3 >= 0);
 
         r = copy_bytes(fd, fd2, max_bytes, try_reflink);

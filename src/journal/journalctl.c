@@ -297,9 +297,9 @@ static void help(void) {
                "  -n --lines[=INTEGER]     Number of journal entries to show\n"
                "     --no-tail             Show all lines, even in follow mode\n"
                "  -r --reverse             Show the newest entries first\n"
-               "  -o --output=STRING       Change journal output mode (short, short-precise,\n"
-               "                             short-iso, short-full, short-monotonic, short-unix,\n"
-               "                             verbose, export, json, json-pretty, json-sse, cat)\n"
+               "  -o --output=STRING       Change journal output mode (short, short-iso,\n"
+               "                                   short-precise, short-monotonic, verbose,\n"
+               "                                   export, json, json-pretty, json-sse, cat)\n"
                "     --utc                 Express time in Coordinated Universal Time (UTC)\n"
                "  -x --catalog             Add message explanations where available\n"
                "     --no-full             Ellipsize fields\n"
@@ -310,7 +310,7 @@ static void help(void) {
                "  -m --merge               Show entries from all available journals\n"
                "  -D --directory=PATH      Show journal files from directory\n"
                "     --file=PATH           Show journal file\n"
-               "     --root=ROOT           Operate on files below a root directory\n"
+               "     --root=ROOT           Operate on catalog files below a root directory\n"
 #ifdef HAVE_GCRYPT
                "     --interval=TIME       Time interval for changing the FSS sealing key\n"
                "     --verify-key=KEY      Specify FSS verification key\n"
@@ -848,8 +848,8 @@ static int parse_argv(int argc, char *argv[]) {
         if (arg_follow && !arg_no_tail && !arg_since && arg_lines == ARG_LINES_DEFAULT)
                 arg_lines = 10;
 
-        if (!!arg_directory + !!arg_file + !!arg_machine + !!arg_root > 1) {
-                log_error("Please specify at most one of -D/--directory=, --file=, -M/--machine=, --root.");
+        if (!!arg_directory + !!arg_file + !!arg_machine > 1) {
+                log_error("Please specify either -D/--directory= or --file= or -M/--machine=, not more than one.");
                 return -EINVAL;
         }
 
@@ -1267,7 +1267,7 @@ static int add_boot(sd_journal *j) {
          * We can do this only when we logs are coming from the current machine,
          * so take the slow path if log location is specified. */
         if (arg_boot_offset == 0 && sd_id128_is_null(arg_boot_id) &&
-            !arg_directory && !arg_file && !arg_root)
+            !arg_directory && !arg_file)
 
                 return add_match_this_boot(j, arg_machine);
 
@@ -1632,7 +1632,7 @@ static int setup_keys(void) {
         n /= arg_interval;
 
         safe_close(fd);
-        fd = mkostemp_safe(k);
+        fd = mkostemp_safe(k, O_WRONLY|O_CLOEXEC);
         if (fd < 0) {
                 r = log_error_errno(fd, "Failed to open %s: %m", k);
                 goto finish;
@@ -1684,9 +1684,9 @@ static int setup_keys(void) {
                         "at a safe location and should not be saved locally on disk.\n"
                         "\n\t%s",
                         ansi_highlight(), ansi_normal(),
-                        p,
                         ansi_highlight(), ansi_normal(),
-                        ansi_highlight_red());
+                        ansi_highlight_red(),
+                        p);
                 fflush(stderr);
         }
         for (i = 0; i < seed_size; i++) {
@@ -2161,8 +2161,6 @@ int main(int argc, char *argv[]) {
 
         if (arg_directory)
                 r = sd_journal_open_directory(&j, arg_directory, arg_journal_type);
-        else if (arg_root)
-                r = sd_journal_open_directory(&j, arg_root, arg_journal_type | SD_JOURNAL_OS_ROOT);
         else if (arg_file_stdin) {
                 int ifd = STDIN_FILENO;
                 r = sd_journal_open_files_fd(&j, &ifd, 1, 0);

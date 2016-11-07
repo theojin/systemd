@@ -43,7 +43,6 @@
 #include "string-util.h"
 #include "strv.h"
 #include "syslog-util.h"
-#include "user-util.h"
 #include "virt.h"
 #include "watchdog.h"
 
@@ -643,54 +642,6 @@ static int method_set_unit_properties(sd_bus_message *message, void *userdata, s
         return bus_unit_method_set_properties(message, u, error);
 }
 
-static int method_ref_unit(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Manager *m = userdata;
-        const char *name;
-        Unit *u;
-        int r;
-
-        assert(message);
-        assert(m);
-
-        r = sd_bus_message_read(message, "s", &name);
-        if (r < 0)
-                return r;
-
-        r = manager_load_unit(m, name, NULL, error, &u);
-        if (r < 0)
-                return r;
-
-        r = bus_unit_check_load_state(u, error);
-        if (r < 0)
-                return r;
-
-        return bus_unit_method_ref(message, u, error);
-}
-
-static int method_unref_unit(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Manager *m = userdata;
-        const char *name;
-        Unit *u;
-        int r;
-
-        assert(message);
-        assert(m);
-
-        r = sd_bus_message_read(message, "s", &name);
-        if (r < 0)
-                return r;
-
-        r = manager_load_unit(m, name, NULL, error, &u);
-        if (r < 0)
-                return r;
-
-        r = bus_unit_check_load_state(u, error);
-        if (r < 0)
-                return r;
-
-        return bus_unit_method_unref(message, u, error);
-}
-
 static int reply_unit_info(sd_bus_message *reply, Unit *u) {
         _cleanup_free_ char *unit_path = NULL, *job_path = NULL;
         Unit *following;
@@ -828,13 +779,6 @@ static int transient_unit_from_message(
         r = bus_unit_set_properties(u, message, UNIT_RUNTIME, false, error);
         if (r < 0)
                 return r;
-
-        /* If the client asked for it, automatically add a reference to this unit. */
-        if (u->bus_track_add) {
-                r = bus_unit_track_add_sender(u, message);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to watch sender: %m");
-        }
 
         /* Now load the missing bits of the unit we just created */
         unit_add_to_load_queue(u);
@@ -1567,8 +1511,8 @@ static int method_unset_and_set_environment(sd_bus_message *message, void *userd
 }
 
 static int method_set_exit_code(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Manager *m = userdata;
         uint8_t code;
+        Manager *m = userdata;
         int r;
 
         assert(message);
@@ -1588,61 +1532,6 @@ static int method_set_exit_code(sd_bus_message *message, void *userdata, sd_bus_
         m->return_value = code;
 
         return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_lookup_dynamic_user_by_name(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Manager *m = userdata;
-        const char *name;
-        uid_t uid;
-        int r;
-
-        assert(message);
-        assert(m);
-
-        r = sd_bus_message_read_basic(message, 's', &name);
-        if (r < 0)
-                return r;
-
-        if (!MANAGER_IS_SYSTEM(m))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_NOT_SUPPORTED, "Dynamic users are only supported in the system instance.");
-        if (!valid_user_group_name(name))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "User name invalid: %s", name);
-
-        r = dynamic_user_lookup_name(m, name, &uid);
-        if (r == -ESRCH)
-                return sd_bus_error_setf(error, BUS_ERROR_NO_SUCH_DYNAMIC_USER, "Dynamic user %s does not exist.", name);
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, "u", (uint32_t) uid);
-}
-
-static int method_lookup_dynamic_user_by_uid(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        _cleanup_free_ char *name = NULL;
-        Manager *m = userdata;
-        uid_t uid;
-        int r;
-
-        assert(message);
-        assert(m);
-
-        assert_cc(sizeof(uid) == sizeof(uint32_t));
-        r = sd_bus_message_read_basic(message, 'u', &uid);
-        if (r < 0)
-                return r;
-
-        if (!MANAGER_IS_SYSTEM(m))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_NOT_SUPPORTED, "Dynamic users are only supported in the system instance.");
-        if (!uid_is_valid(uid))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "User ID invalid: " UID_FMT, uid);
-
-        r = dynamic_user_lookup_uid(m, uid, &name);
-        if (r == -ESRCH)
-                return sd_bus_error_setf(error, BUS_ERROR_NO_SUCH_DYNAMIC_USER, "Dynamic user ID " UID_FMT " does not exist.", uid);
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, "s", name);
 }
 
 static int list_unit_files_by_patterns(sd_bus_message *message, void *userdata, sd_bus_error *error, char **states, char **patterns) {
@@ -2266,8 +2155,6 @@ const sd_bus_vtable bus_manager_vtable[] = {
         SD_BUS_METHOD("KillUnit", "ssi", NULL, method_kill_unit, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("ResetFailedUnit", "s", NULL, method_reset_failed_unit, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("SetUnitProperties", "sba(sv)", NULL, method_set_unit_properties, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("RefUnit", "s", NULL, method_ref_unit, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("UnrefUnit", "s", NULL, method_unref_unit, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("StartTransientUnit", "ssa(sv)a(sa(sv))", "o", method_start_transient_unit, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("GetUnitProcesses", "s", "a(sus)", method_get_unit_processes, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("GetJob", "u", "o", method_get_job, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -2312,8 +2199,6 @@ const sd_bus_vtable bus_manager_vtable[] = {
         SD_BUS_METHOD("PresetAllUnitFiles", "sbb", "a(sss)", method_preset_all_unit_files, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("AddDependencyUnitFiles", "asssbb", "a(sss)", method_add_dependency_unit_files, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("SetExitCode", "y", NULL, method_set_exit_code, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("LookupDynamicUserByName", "s", "u", method_lookup_dynamic_user_by_name, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("LookupDynamicUserByUID", "u", "s", method_lookup_dynamic_user_by_uid, SD_BUS_VTABLE_UNPRIVILEGED),
 
         SD_BUS_SIGNAL("UnitNew", "so", 0),
         SD_BUS_SIGNAL("UnitRemoved", "so", 0),

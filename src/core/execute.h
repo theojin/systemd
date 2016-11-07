@@ -92,8 +92,6 @@ struct ExecRuntime {
         char *tmp_dir;
         char *var_tmp_dir;
 
-        /* An AF_UNIX socket pair, that contains a datagram containing a file descriptor referring to the network
-         * namespace. */
         int netns_storage_socket[2];
 };
 
@@ -171,14 +169,10 @@ struct ExecContext {
         bool private_tmp;
         bool private_network;
         bool private_devices;
-        bool private_users;
         ProtectSystem protect_system;
         ProtectHome protect_home;
 
         bool no_new_privileges;
-
-        bool dynamic_user;
-        bool remove_ipc;
 
         /* This is not exposed to the user but available
          * internally. We need it to make sure that whenever we spawn
@@ -210,19 +204,6 @@ struct ExecContext {
         bool no_new_privileges_set:1;
 };
 
-typedef enum ExecFlags {
-        EXEC_CONFIRM_SPAWN     = 1U << 0,
-        EXEC_APPLY_PERMISSIONS = 1U << 1,
-        EXEC_APPLY_CHROOT      = 1U << 2,
-        EXEC_APPLY_TTY_STDIN   = 1U << 3,
-
-        /* The following are not used by execute.c, but by consumers internally */
-        EXEC_PASS_FDS          = 1U << 4,
-        EXEC_IS_CONTROL        = 1U << 5,
-        EXEC_SETENV_RESULT     = 1U << 6,
-        EXEC_SET_WATCHDOG      = 1U << 7,
-} ExecFlags;
-
 struct ExecParameters {
         char **argv;
         char **environment;
@@ -231,7 +212,11 @@ struct ExecParameters {
         char **fd_names;
         unsigned n_fds;
 
-        ExecFlags flags;
+        bool apply_permissions:1;
+        bool apply_chroot:1;
+        bool apply_tty_stdin:1;
+
+        bool confirm_spawn:1;
         bool selinux_context_net:1;
 
         bool cgroup_delegate:1;
@@ -250,14 +235,12 @@ struct ExecParameters {
 };
 
 #include "unit.h"
-#include "dynamic-user.h"
 
 int exec_spawn(Unit *unit,
                ExecCommand *command,
                const ExecContext *context,
                const ExecParameters *exec_params,
                ExecRuntime *runtime,
-               DynamicCreds *dynamic_creds,
                pid_t *ret);
 
 void exec_command_done(ExecCommand *c);

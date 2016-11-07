@@ -43,7 +43,7 @@ typedef enum Storage {
 
 typedef enum SplitMode {
         SPLIT_UID,
-        SPLIT_LOGIN, /* deprecated */
+        SPLIT_LOGIN,
         SPLIT_NONE,
         _SPLIT_MAX,
         _SPLIT_INVALID = -1

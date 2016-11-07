@@ -221,7 +221,7 @@ static void scope_dump(Unit *u, FILE *f, const char *prefix) {
 static void scope_enter_dead(Scope *s, ScopeResult f) {
         assert(s);
 
-        if (s->result == SCOPE_SUCCESS)
+        if (f != SCOPE_SUCCESS)
                 s->result = f;
 
         scope_set_state(s, s->result != SCOPE_SUCCESS ? SCOPE_FAILED : SCOPE_DEAD);
@@ -233,7 +233,7 @@ static void scope_enter_signal(Scope *s, ScopeState state, ScopeResult f) {
 
         assert(s);
 
-        if (s->result == SCOPE_SUCCESS)
+        if (f != SCOPE_SUCCESS)
                 s->result = f;
 
         unit_watch_all_pids(UNIT(s));
@@ -441,7 +441,7 @@ static void scope_sigchld_event(Unit *u, pid_t pid, int code, int status) {
 
         /* If the PID set is empty now, then let's finish this off
            (On unified we use proper notifications) */
-        if (cg_unified(SYSTEMD_CGROUP_CONTROLLER) <= 0 && set_isempty(u->pids))
+        if (cg_unified() <= 0 && set_isempty(u->pids))
                 scope_notify_cgroup_empty_event(u);
 }
 

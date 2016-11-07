@@ -384,7 +384,6 @@ bin_PROGRAMS = \
 	systemd-delta \
 	systemd-analyze \
 	systemd-run \
-	systemd-mount \
 	systemd-stdio-bridge \
 	systemd-path
 
@@ -574,18 +573,7 @@ endif
 dist_userunit_DATA = \
 	units/user/basic.target \
 	units/user/default.target \
-	units/user/exit.target \
-	units/user/graphical-session.target \
-	units/user/graphical-session-pre.target \
-	units/user/bluetooth.target \
-	units/user/busnames.target \
-	units/user/paths.target \
-	units/user/printer.target \
-	units/user/shutdown.target \
-	units/user/smartcard.target \
-	units/user/sockets.target \
-	units/user/sound.target \
-	units/user/timers.target
+	units/user/exit.target
 
 nodist_userunit_DATA = \
 	units/user/systemd-exit.service
@@ -643,10 +631,6 @@ EXTRA_DIST += \
 	src/systemctl/systemd-sysv-install.SKELETON \
 	units/rc-local.service.in \
 	units/halt-local.service.in
-
-GENERAL_ALIASES += \
-	$(systemunitdir)/reboot.target $(pkgsysconfdir)/system/ctrl-alt-del.target \
-	$(systemunitdir)/machines.target $(pkgsysconfdir)/system/multi-user.target.wants/machines.target
 
 # automake is broken and can't handle files with a dash in front
 # http://debbugs.gnu.org/cgi/bugreport.cgi?bug=14728#8
@@ -1214,8 +1198,6 @@ libcore_la_SOURCES = \
 	src/core/load-dropin.h \
 	src/core/execute.c \
 	src/core/execute.h \
-	src/core/dynamic-user.c \
-	src/core/dynamic-user.h \
 	src/core/kill.c \
 	src/core/kill.h \
 	src/core/dbus.c \
@@ -1643,9 +1625,6 @@ EXTRA_DIST += \
 	test/test-execute/exec-personality-x86-64.service \
 	test/test-execute/exec-personality-x86.service \
 	test/test-execute/exec-personality-s390.service \
-	test/test-execute/exec-personality-ppc64.service \
-	test/test-execute/exec-personality-ppc64le.service \
-	test/test-execute/exec-personality-aarch64.service \
 	test/test-execute/exec-privatedevices-no.service \
 	test/test-execute/exec-privatedevices-yes.service \
 	test/test-execute/exec-privatetmp-no.service \
@@ -3147,13 +3126,6 @@ systemd_run_LDADD = \
 	libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
-systemd_mount_SOURCES = \
-	src/mount/mount-tool.c
-
-systemd_mount_LDADD = \
-	libsystemd-shared.la
-
-# ------------------------------------------------------------------------------
 systemd_stdio_bridge_SOURCES = \
 	src/stdio-bridge/stdio-bridge.c
 
@@ -3323,7 +3295,6 @@ tests += \
 	test-bus-error \
 	test-bus-creds \
 	test-bus-gvariant \
-	test-bus-track \
 	test-event \
 	test-netlink \
 	test-local-addresses \
@@ -3365,16 +3336,6 @@ test_bus_cleanup_CFLAGS = \
 	$(SECCOMP_CFLAGS)
 
 test_bus_cleanup_LDADD = \
-	libsystemd-shared.la
-
-test_bus_track_SOURCES = \
-	src/libsystemd/sd-bus/test-bus-track.c
-
-test_bus_track_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(SECCOMP_CFLAGS)
-
-test_bus_track_LDADD = \
 	libsystemd-shared.la
 
 test_bus_server_SOURCES = \
@@ -3904,8 +3865,7 @@ TESTS += \
 
 if HAVE_PYTHON
 TESTS += \
-	test/rule-syntax-check.py \
-	hwdb/parse_hwdb.py
+	test/rule-syntax-check.py
 
 if HAVE_SYSV_COMPAT
 TESTS += \
@@ -3957,8 +3917,7 @@ EXTRA_DIST += \
 	test/udev-test.pl \
 	test/rule-syntax-check.py \
 	test/sysv-generator-test.py \
-	test/mocks/fsck \
-	hwdb/parse_hwdb.py
+	test/mocks/fsck
 
 # ------------------------------------------------------------------------------
 ata_id_SOURCES = \
@@ -4670,6 +4629,9 @@ nodist_udevrules_DATA += \
 
 nodist_systemunit_DATA += \
 	units/systemd-vconsole-setup.service
+
+SYSINIT_TARGET_WANTS += \
+	systemd-vconsole-setup.service
 endif
 
 EXTRA_DIST += \
@@ -5037,27 +4999,6 @@ test_nss_LDADD = \
 
 manual_tests += \
 	test-nss
-
-# ------------------------------------------------------------------------------
-libnss_systemd_la_SOURCES = \
-	src/nss-systemd/nss-systemd.sym \
-	src/nss-systemd/nss-systemd.c
-
-libnss_systemd_la_LDFLAGS = \
-	$(AM_LDFLAGS) \
-	-module \
-	-export-dynamic \
-	-avoid-version \
-	-shared \
-	-shrext .so.2 \
-	-Wl,--version-script=$(top_srcdir)/src/nss-systemd/nss-systemd.sym
-
-libnss_systemd_la_LIBADD = \
-	libsystemd-internal.la \
-	libbasic.la
-
-lib_LTLIBRARIES += \
-	libnss_systemd.la
 
 # ------------------------------------------------------------------------------
 if HAVE_MYHOSTNAME
@@ -5650,8 +5591,6 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-netdev-bond.c \
 	src/network/networkd-netdev-bridge.h \
 	src/network/networkd-netdev-bridge.c \
-	src/network/networkd-netdev-vcan.h \
-	src/network/networkd-netdev-vcan.c \
 	src/network/networkd-link-bus.c \
 	src/network/networkd-ipv4ll.c \
 	src/network/networkd-dhcp4.c \
@@ -6325,6 +6264,19 @@ SYSTEM_UNIT_ALIASES += \
 	graphical.target default.target \
 	reboot.target ctrl-alt-del.target \
 	getty@.service autovt@.service
+
+USER_UNIT_ALIASES += \
+	$(systemunitdir)/shutdown.target shutdown.target \
+	$(systemunitdir)/sockets.target sockets.target \
+	$(systemunitdir)/timers.target timers.target \
+	$(systemunitdir)/paths.target paths.target \
+	$(systemunitdir)/bluetooth.target bluetooth.target \
+	$(systemunitdir)/printer.target printer.target \
+	$(systemunitdir)/sound.target sound.target \
+	$(systemunitdir)/smartcard.target smartcard.target
+
+USER_UNIT_ALIASES += \
+	$(systemunitdir)/busnames.target busnames.target
 
 GENERAL_ALIASES += \
 	$(systemunitdir)/remote-fs.target $(pkgsysconfdir)/system/multi-user.target.wants/remote-fs.target \

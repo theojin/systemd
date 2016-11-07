@@ -100,9 +100,7 @@ Unit *unit_new(Manager *m, size_t size) {
         u->on_failure_job_mode = JOB_REPLACE;
         u->cgroup_inotify_wd = -1;
         u->job_timeout = USEC_INFINITY;
-        u->ref_uid = UID_INVALID;
-        u->ref_gid = GID_INVALID;
-        u->cpu_usage_last = NSEC_INFINITY;
+        u->sigchldgen = 0;
 
         RATELIMIT_INIT(u->start_limit, m->default_start_limit_interval, m->default_start_limit_burst);
         RATELIMIT_INIT(u->auto_stop_ratelimit, 10 * USEC_PER_SEC, 16);
@@ -114,7 +112,7 @@ bool unit_has_name(Unit *u, const char *name) {
         assert(u);
         assert(name);
 
-        return set_contains(u->names, (char*) name);
+        return !!set_get(u->names, (char*) name);
 }
 
 static void unit_init(Unit *u) {
@@ -330,9 +328,6 @@ bool unit_check_gc(Unit *u) {
         if (u->refs)
                 return true;
 
-        if (sd_bus_track_count(u->bus_track) > 0)
-                return true;
-
         if (UNIT_VTABLE(u)->check_gc)
                 if (UNIT_VTABLE(u)->check_gc(u))
                         return true;
@@ -513,9 +508,6 @@ void unit_free(Unit *u) {
 
         sd_bus_slot_unref(u->match_bus_slot);
 
-        sd_bus_track_unref(u->bus_track);
-        u->deserialized_refs = strv_free(u->deserialized_refs);
-
         unit_free_requires_mounts_for(u);
 
         SET_FOREACH(t, u->names, i)
@@ -557,8 +549,6 @@ void unit_free(Unit *u) {
                 LIST_REMOVE(cgroup_queue, u->manager->cgroup_queue, u);
 
         unit_release_cgroup(u);
-
-        unit_unref_uid_gid(u, false);
 
         (void) manager_update_failed_units(u->manager, u, false);
         set_remove(u->manager->startup_units, u);
@@ -904,7 +894,6 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
         Unit *following;
         _cleanup_set_free_ Set *following_set = NULL;
         int r;
-        const char *n;
 
         assert(u);
         assert(u->type >= 0);
@@ -1046,8 +1035,6 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
         else if (u->load_state == UNIT_ERROR)
                 fprintf(f, "%s\tLoad Error Code: %s\n", prefix, strerror(-u->load_error));
 
-        for (n = sd_bus_track_first(u->bus_track); n; n = sd_bus_track_next(u->bus_track))
-                fprintf(f, "%s\tBus Ref: %s\n", prefix, n);
 
         if (u->job)
                 job_dump(u->job, f, prefix2);
@@ -2621,31 +2608,21 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
                 unit_serialize_item(u, f, "assert-result", yes_no(u->assert_result));
 
         unit_serialize_item(u, f, "transient", yes_no(u->transient));
-
-        unit_serialize_item_format(u, f, "cpu-usage-base", "%" PRIu64, u->cpu_usage_base);
-        if (u->cpu_usage_last != NSEC_INFINITY)
-                unit_serialize_item_format(u, f, "cpu-usage-last", "%" PRIu64, u->cpu_usage_last);
+        unit_serialize_item_format(u, f, "cpuacct-usage-base", "%" PRIu64, u->cpuacct_usage_base);
 
         if (u->cgroup_path)
                 unit_serialize_item(u, f, "cgroup", u->cgroup_path);
         unit_serialize_item(u, f, "cgroup-realized", yes_no(u->cgroup_realized));
 
-        if (uid_is_valid(u->ref_uid))
-                unit_serialize_item_format(u, f, "ref-uid", UID_FMT, u->ref_uid);
-        if (gid_is_valid(u->ref_gid))
-                unit_serialize_item_format(u, f, "ref-gid", GID_FMT, u->ref_gid);
-
-        bus_track_serialize(u->bus_track, f, "ref");
-
         if (serialize_jobs) {
                 if (u->job) {
                         fprintf(f, "job\n");
-                        job_serialize(u->job, f);
+                        job_serialize(u->job, f, fds);
                 }
 
                 if (u->nop_job) {
                         fprintf(f, "job\n");
-                        job_serialize(u->nop_job, f);
+                        job_serialize(u->nop_job, f, fds);
                 }
         }
 
@@ -2775,7 +2752,7 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
                                 if (!j)
                                         return log_oom();
 
-                                r = job_deserialize(j, f);
+                                r = job_deserialize(j, f, fds);
                                 if (r < 0) {
                                         job_free(j);
                                         return r;
@@ -2847,19 +2824,11 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
 
                         continue;
 
-                } else if (STR_IN_SET(l, "cpu-usage-base", "cpuacct-usage-base")) {
+                } else if (streq(l, "cpuacct-usage-base")) {
 
-                        r = safe_atou64(v, &u->cpu_usage_base);
+                        r = safe_atou64(v, &u->cpuacct_usage_base);
                         if (r < 0)
-                                log_unit_debug(u, "Failed to parse CPU usage base %s, ignoring.", v);
-
-                        continue;
-
-                } else if (streq(l, "cpu-usage-last")) {
-
-                        r = safe_atou64(v, &u->cpu_usage_last);
-                        if (r < 0)
-                                log_unit_debug(u, "Failed to read CPU usage last %s, ignoring.", v);
+                                log_unit_debug(u, "Failed to parse CPU usage %s, ignoring.", v);
 
                         continue;
 
@@ -2880,34 +2849,6 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
                                 log_unit_debug(u, "Failed to parse cgroup-realized bool %s, ignoring.", v);
                         else
                                 u->cgroup_realized = b;
-
-                        continue;
-
-                } else if (streq(l, "ref-uid")) {
-                        uid_t uid;
-
-                        r = parse_uid(v, &uid);
-                        if (r < 0)
-                                log_unit_debug(u, "Failed to parse referenced UID %s, ignoring.", v);
-                        else
-                                unit_ref_uid_gid(u, uid, GID_INVALID);
-
-                        continue;
-
-                } else if (streq(l, "ref-gid")) {
-                        gid_t gid;
-
-                        r = parse_gid(v, &gid);
-                        if (r < 0)
-                                log_unit_debug(u, "Failed to parse referenced GID %s, ignoring.", v);
-                        else
-                                unit_ref_uid_gid(u, UID_INVALID, gid);
-
-                } else if (streq(l, "ref")) {
-
-                        r = strv_extend(&u->deserialized_refs, v);
-                        if (r < 0)
-                                log_oom();
 
                         continue;
                 }
@@ -2984,8 +2925,7 @@ int unit_add_node_link(Unit *u, const char *what, bool wants, UnitDependency dep
 }
 
 int unit_coldplug(Unit *u) {
-        int r = 0, q;
-        char **i;
+        int r = 0, q = 0;
 
         assert(u);
 
@@ -2996,26 +2936,18 @@ int unit_coldplug(Unit *u) {
 
         u->coldplugged = true;
 
-        STRV_FOREACH(i, u->deserialized_refs) {
-                q = bus_unit_track_add_name(u, *i);
-                if (q < 0 && r >= 0)
-                        r = q;
-        }
-        u->deserialized_refs = strv_free(u->deserialized_refs);
+        if (UNIT_VTABLE(u)->coldplug)
+                r = UNIT_VTABLE(u)->coldplug(u);
 
-        if (UNIT_VTABLE(u)->coldplug) {
-                q = UNIT_VTABLE(u)->coldplug(u);
-                if (q < 0 && r >= 0)
-                        r = q;
-        }
-
-        if (u->job) {
+        if (u->job)
                 q = job_coldplug(u->job);
-                if (q < 0 && r >= 0)
-                        r = q;
-        }
 
-        return r;
+        if (r < 0)
+                return r;
+        if (q < 0)
+                return q;
+
+        return 0;
 }
 
 static bool fragment_mtime_newer(const char *path, usec_t mtime) {
@@ -3292,33 +3224,6 @@ void unit_ref_unset(UnitRef *ref) {
         ref->unit = NULL;
 }
 
-static int user_from_unit_name(Unit *u, char **ret) {
-
-        static const uint8_t hash_key[] = {
-                0x58, 0x1a, 0xaf, 0xe6, 0x28, 0x58, 0x4e, 0x96,
-                0xb4, 0x4e, 0xf5, 0x3b, 0x8c, 0x92, 0x07, 0xec
-        };
-
-        _cleanup_free_ char *n = NULL;
-        int r;
-
-        r = unit_name_to_prefix(u->id, &n);
-        if (r < 0)
-                return r;
-
-        if (valid_user_group_name(n)) {
-                *ret = n;
-                n = NULL;
-                return 0;
-        }
-
-        /* If we can't use the unit name as a user name, then let's hash it and use that */
-        if (asprintf(ret, "_du%016" PRIx64, siphash24(n, strlen(n), hash_key)) < 0)
-                return -ENOMEM;
-
-        return 0;
-}
-
 int unit_patch_contexts(Unit *u) {
         CGroupContext *cc;
         ExecContext *ec;
@@ -3363,23 +3268,6 @@ int unit_patch_contexts(Unit *u) {
 
                 if (ec->private_devices)
                         ec->capability_bounding_set &= ~(UINT64_C(1) << CAP_MKNOD);
-
-                if (ec->dynamic_user) {
-                        if (!ec->user) {
-                                r = user_from_unit_name(u, &ec->user);
-                                if (r < 0)
-                                        return r;
-                        }
-
-                        if (!ec->group) {
-                                ec->group = strdup(ec->user);
-                                if (!ec->group)
-                                        return -ENOMEM;
-                        }
-
-                        ec->private_tmp = true;
-                        ec->remove_ipc = true;
-                }
         }
 
         cc = unit_get_cgroup_context(u);
@@ -3764,7 +3652,7 @@ int unit_kill_context(
                          * there we get proper events. Hence rely on
                          * them.*/
 
-                        if  (cg_unified(SYSTEMD_CGROUP_CONTROLLER) > 0 ||
+                        if  (cg_unified() > 0 ||
                              (detect_container() == 0 && !unit_cgroup_delegate(u)))
                                 wait_for_exit = true;
 
@@ -3888,26 +3776,6 @@ int unit_setup_exec_runtime(Unit *u) {
         return exec_runtime_make(rt, unit_get_exec_context(u), u->id);
 }
 
-int unit_setup_dynamic_creds(Unit *u) {
-        ExecContext *ec;
-        DynamicCreds *dcreds;
-        size_t offset;
-
-        assert(u);
-
-        offset = UNIT_VTABLE(u)->dynamic_creds_offset;
-        assert(offset > 0);
-        dcreds = (DynamicCreds*) ((uint8_t*) u + offset);
-
-        ec = unit_get_exec_context(u);
-        assert(ec);
-
-        if (!ec->dynamic_user)
-                return 0;
-
-        return dynamic_creds_acquire(dcreds, u->manager, ec->user, ec->group);
-}
-
 bool unit_type_supported(UnitType t) {
         if (_unlikely_(t < 0))
                 return false;
@@ -4000,145 +3868,4 @@ pid_t unit_main_pid(Unit *u) {
                 return UNIT_VTABLE(u)->main_pid(u);
 
         return 0;
-}
-
-static void unit_unref_uid_internal(
-                Unit *u,
-                uid_t *ref_uid,
-                bool destroy_now,
-                void (*_manager_unref_uid)(Manager *m, uid_t uid, bool destroy_now)) {
-
-        assert(u);
-        assert(ref_uid);
-        assert(_manager_unref_uid);
-
-        /* Generic implementation of both unit_unref_uid() and unit_unref_gid(), under the assumption that uid_t and
-         * gid_t are actually the same time, with the same validity rules.
-         *
-         * Drops a reference to UID/GID from a unit. */
-
-        assert_cc(sizeof(uid_t) == sizeof(gid_t));
-        assert_cc(UID_INVALID == (uid_t) GID_INVALID);
-
-        if (!uid_is_valid(*ref_uid))
-                return;
-
-        _manager_unref_uid(u->manager, *ref_uid, destroy_now);
-        *ref_uid = UID_INVALID;
-}
-
-void unit_unref_uid(Unit *u, bool destroy_now) {
-        unit_unref_uid_internal(u, &u->ref_uid, destroy_now, manager_unref_uid);
-}
-
-void unit_unref_gid(Unit *u, bool destroy_now) {
-        unit_unref_uid_internal(u, (uid_t*) &u->ref_gid, destroy_now, manager_unref_gid);
-}
-
-static int unit_ref_uid_internal(
-                Unit *u,
-                uid_t *ref_uid,
-                uid_t uid,
-                bool clean_ipc,
-                int (*_manager_ref_uid)(Manager *m, uid_t uid, bool clean_ipc)) {
-
-        int r;
-
-        assert(u);
-        assert(ref_uid);
-        assert(uid_is_valid(uid));
-        assert(_manager_ref_uid);
-
-        /* Generic implementation of both unit_ref_uid() and unit_ref_guid(), under the assumption that uid_t and gid_t
-         * are actually the same type, and have the same validity rules.
-         *
-         * Adds a reference on a specific UID/GID to this unit. Each unit referencing the same UID/GID maintains a
-         * reference so that we can destroy the UID/GID's IPC resources as soon as this is requested and the counter
-         * drops to zero. */
-
-        assert_cc(sizeof(uid_t) == sizeof(gid_t));
-        assert_cc(UID_INVALID == (uid_t) GID_INVALID);
-
-        if (*ref_uid == uid)
-                return 0;
-
-        if (uid_is_valid(*ref_uid)) /* Already set? */
-                return -EBUSY;
-
-        r = _manager_ref_uid(u->manager, uid, clean_ipc);
-        if (r < 0)
-                return r;
-
-        *ref_uid = uid;
-        return 1;
-}
-
-int unit_ref_uid(Unit *u, uid_t uid, bool clean_ipc) {
-        return unit_ref_uid_internal(u, &u->ref_uid, uid, clean_ipc, manager_ref_uid);
-}
-
-int unit_ref_gid(Unit *u, gid_t gid, bool clean_ipc) {
-        return unit_ref_uid_internal(u, (uid_t*) &u->ref_gid, (uid_t) gid, clean_ipc, manager_ref_gid);
-}
-
-static int unit_ref_uid_gid_internal(Unit *u, uid_t uid, gid_t gid, bool clean_ipc) {
-        int r = 0, q = 0;
-
-        assert(u);
-
-        /* Reference both a UID and a GID in one go. Either references both, or neither. */
-
-        if (uid_is_valid(uid)) {
-                r = unit_ref_uid(u, uid, clean_ipc);
-                if (r < 0)
-                        return r;
-        }
-
-        if (gid_is_valid(gid)) {
-                q = unit_ref_gid(u, gid, clean_ipc);
-                if (q < 0) {
-                        if (r > 0)
-                                unit_unref_uid(u, false);
-
-                        return q;
-                }
-        }
-
-        return r > 0 || q > 0;
-}
-
-int unit_ref_uid_gid(Unit *u, uid_t uid, gid_t gid) {
-        ExecContext *c;
-        int r;
-
-        assert(u);
-
-        c = unit_get_exec_context(u);
-
-        r = unit_ref_uid_gid_internal(u, uid, gid, c ? c->remove_ipc : false);
-        if (r < 0)
-                return log_unit_warning_errno(u, r, "Couldn't add UID/GID reference to unit, proceeding without: %m");
-
-        return r;
-}
-
-void unit_unref_uid_gid(Unit *u, bool destroy_now) {
-        assert(u);
-
-        unit_unref_uid(u, destroy_now);
-        unit_unref_gid(u, destroy_now);
-}
-
-void unit_notify_user_lookup(Unit *u, uid_t uid, gid_t gid) {
-        int r;
-
-        assert(u);
-
-        /* This is invoked whenever one of the forked off processes let's us know the UID/GID its user name/group names
-         * resolved to. We keep track of which UID/GID is currently assigned in order to be able to destroy its IPC
-         * objects when no service references the UID/GID anymore. */
-
-        r = unit_ref_uid_gid(u, uid, gid);
-        if (r > 0)
-                bus_unit_send_change_signal(u);
 }

@@ -30,7 +30,7 @@ static void test_glob_exists(void) {
         int fd = -1;
         int r;
 
-        fd = mkostemp_safe(name);
+        fd = mkostemp_safe(name, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         close(fd);
 

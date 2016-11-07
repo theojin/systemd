@@ -997,10 +997,7 @@ char *job_dbus_path(Job *j) {
         return p;
 }
 
-int job_serialize(Job *j, FILE *f) {
-        assert(j);
-        assert(f);
-
+int job_serialize(Job *j, FILE *f, FDSet *fds) {
         fprintf(f, "job-id=%u\n", j->id);
         fprintf(f, "job-type=%s\n", job_type_to_string(j->type));
         fprintf(f, "job-state=%s\n", job_state_to_string(j->state));
@@ -1011,16 +1008,15 @@ int job_serialize(Job *j, FILE *f) {
         if (j->begin_usec > 0)
                 fprintf(f, "job-begin="USEC_FMT"\n", j->begin_usec);
 
-        bus_track_serialize(j->clients, f, "subscribed");
+        bus_track_serialize(j->clients, f);
 
         /* End marker */
         fputc('\n', f);
         return 0;
 }
 
-int job_deserialize(Job *j, FILE *f) {
+int job_deserialize(Job *j, FILE *f, FDSet *fds) {
         assert(j);
-        assert(f);
 
         for (;;) {
                 char line[LINE_MAX], *l, *v;
@@ -1110,7 +1106,7 @@ int job_deserialize(Job *j, FILE *f) {
                 } else if (streq(l, "subscribed")) {
 
                         if (strv_extend(&j->deserialized_clients, v) < 0)
-                                log_oom();
+                                return log_oom();
                 }
         }
 }
@@ -1122,8 +1118,9 @@ int job_coldplug(Job *j) {
 
         /* After deserialization is complete and the bus connection
          * set up again, let's start watching our subscribers again */
-        (void) bus_track_coldplug(j->manager, &j->clients, false, j->deserialized_clients);
-        j->deserialized_clients = strv_free(j->deserialized_clients);
+        r = bus_track_coldplug(j->manager, &j->clients, &j->deserialized_clients);
+        if (r < 0)
+                return r;
 
         if (j->state == JOB_WAITING)
                 job_add_to_run_queue(j);

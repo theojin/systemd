@@ -964,6 +964,10 @@ static int bus_init_private(Manager *m) {
         if (m->private_listen_fd >= 0)
                 return 0;
 
+        /* We don't need the private socket if we have kdbus */
+        if (m->kdbus_fd >= 0)
+                return 0;
+
         if (MANAGER_IS_SYSTEM(m)) {
 
                 /* We want the private bus only when running as init */
@@ -1164,57 +1168,60 @@ int bus_foreach_bus(
         return ret;
 }
 
-void bus_track_serialize(sd_bus_track *t, FILE *f, const char *prefix) {
+void bus_track_serialize(sd_bus_track *t, FILE *f) {
         const char *n;
 
         assert(f);
-        assert(prefix);
 
-        for (n = sd_bus_track_first(t); n; n = sd_bus_track_next(t)) {
-                int c, j;
-
-                c = sd_bus_track_count_name(t, n);
-
-                for (j = 0; j < c; j++) {
-                        fputs(prefix, f);
-                        fputc('=', f);
-                        fputs(n, f);
-                        fputc('\n', f);
-                }
-        }
+        for (n = sd_bus_track_first(t); n; n = sd_bus_track_next(t))
+                fprintf(f, "subscribed=%s\n", n);
 }
 
-int bus_track_coldplug(Manager *m, sd_bus_track **t, bool recursive, char **l) {
-        char **i;
+int bus_track_deserialize_item(char ***l, const char *line) {
+        const char *e;
+        int r;
+
+        assert(l);
+        assert(line);
+
+        e = startswith(line, "subscribed=");
+        if (!e)
+                return 0;
+
+        r = strv_extend(l, e);
+        if (r < 0)
+                return r;
+
+        return 1;
+}
+
+int bus_track_coldplug(Manager *m, sd_bus_track **t, char ***l) {
         int r = 0;
 
         assert(m);
         assert(t);
+        assert(l);
 
-        if (strv_isempty(l))
-                return 0;
+        if (!strv_isempty(*l) && m->api_bus) {
+                char **i;
 
-        if (!m->api_bus)
-                return 0;
+                if (!*t) {
+                        r = sd_bus_track_new(m->api_bus, t, NULL, NULL);
+                        if (r < 0)
+                                return r;
+                }
 
-        if (!*t) {
-                r = sd_bus_track_new(m->api_bus, t, NULL, NULL);
-                if (r < 0)
-                        return r;
+                r = 0;
+                STRV_FOREACH(i, *l) {
+                        int k;
+
+                        k = sd_bus_track_add_name(*t, *i);
+                        if (k < 0)
+                                r = k;
+                }
         }
 
-        r = sd_bus_track_set_recursive(*t, recursive);
-        if (r < 0)
-                return r;
-
-        r = 0;
-        STRV_FOREACH(i, l) {
-                int k;
-
-                k = sd_bus_track_add_name(*t, *i);
-                if (k < 0)
-                        r = k;
-        }
+        *l = strv_free(*l);
 
         return r;
 }

@@ -112,17 +112,6 @@ static inline bool CGROUP_BLKIO_WEIGHT_IS_OK(uint64_t x) {
             (x >= CGROUP_BLKIO_WEIGHT_MIN && x <= CGROUP_BLKIO_WEIGHT_MAX);
 }
 
-/* Default resource limits */
-#define DEFAULT_TASKS_MAX_PERCENTAGE            15U /* 15% of PIDs, 4915 on default settings */
-#define DEFAULT_USER_TASKS_MAX_PERCENTAGE       33U /* 33% of PIDs, 10813 on default settings */
-
-typedef enum CGroupUnified {
-        CGROUP_UNIFIED_UNKNOWN = -1,
-        CGROUP_UNIFIED_NONE = 0,        /* Both systemd and controllers on legacy */
-        CGROUP_UNIFIED_SYSTEMD = 1,     /* Only systemd on unified */
-        CGROUP_UNIFIED_ALL = 2,         /* Both systemd and controllers on unified */
-} CGroupUnified;
-
 /*
  * General rules:
  *
@@ -180,7 +169,6 @@ int cg_create_and_attach(const char *controller, const char *path, pid_t pid);
 
 int cg_set_attribute(const char *controller, const char *path, const char *attribute, const char *value);
 int cg_get_attribute(const char *controller, const char *path, const char *attribute, char **ret);
-int cg_get_keyed_attribute(const char *controller, const char *path, const char *attribute, const char **keys, char **values);
 
 int cg_set_group_access(const char *controller, const char *path, mode_t mode, uid_t uid, gid_t gid);
 int cg_set_task_access(const char *controller, const char *path, mode_t mode, uid_t uid, gid_t gid);
@@ -234,16 +222,11 @@ int cg_mask_supported(CGroupMask *ret);
 
 int cg_kernel_controllers(Set *controllers);
 
-bool cg_ns_supported(void);
-
-int cg_all_unified(void);
-int cg_unified(const char *controller);
+int cg_unified(void);
 void cg_unified_flush(void);
 
 bool cg_is_unified_wanted(void);
 bool cg_is_legacy_wanted(void);
-bool cg_is_unified_systemd_controller_wanted(void);
-bool cg_is_legacy_systemd_controller_wanted(void);
 
 const char* cgroup_controller_to_string(CGroupController c) _const_;
 CGroupController cgroup_controller_from_string(const char *s) _pure_;

@@ -17,4 +17,3 @@ Service=systemd-udevd.service
 ListenSequentialPacket=/run/udev/control
 SocketMode=0600
 PassCredentials=yes
-RemoveOnStop=yes

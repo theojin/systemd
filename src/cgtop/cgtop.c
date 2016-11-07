@@ -208,47 +208,24 @@ static int process(
                 if (g->n_tasks > 0)
                         g->n_tasks_valid = true;
 
-        } else if (streq(controller, "cpu") || streq(controller, "cpuacct")) {
+        } else if (streq(controller, "cpuacct") && cg_unified() <= 0) {
                 _cleanup_free_ char *p = NULL, *v = NULL;
                 uint64_t new_usage;
                 nsec_t timestamp;
 
-                if (cg_all_unified() > 0) {
-                        const char *keys[] = { "usage_usec", NULL };
-                        _cleanup_free_ char *val = NULL;
+                r = cg_get_path(controller, path, "cpuacct.usage", &p);
+                if (r < 0)
+                        return r;
 
-                        if (!streq(controller, "cpu"))
-                                return 0;
+                r = read_one_line_file(p, &v);
+                if (r == -ENOENT)
+                        return 0;
+                if (r < 0)
+                        return r;
 
-                        r = cg_get_keyed_attribute("cpu", path, "cpu.stat", keys, &val);
-                        if (r == -ENOENT)
-                                return 0;
-                        if (r < 0)
-                                return r;
-
-                        r = safe_atou64(val, &new_usage);
-                        if (r < 0)
-                                return r;
-
-                        new_usage *= NSEC_PER_USEC;
-                } else {
-                        if (!streq(controller, "cpuacct"))
-                                return 0;
-
-                        r = cg_get_path(controller, path, "cpuacct.usage", &p);
-                        if (r < 0)
-                                return r;
-
-                        r = read_one_line_file(p, &v);
-                        if (r == -ENOENT)
-                                return 0;
-                        if (r < 0)
-                                return r;
-
-                        r = safe_atou64(v, &new_usage);
-                        if (r < 0)
-                                return r;
-                }
+                r = safe_atou64(v, &new_usage);
+                if (r < 0)
+                        return r;
 
                 timestamp = now_nsec(CLOCK_MONOTONIC);
 
@@ -273,7 +250,7 @@ static int process(
         } else if (streq(controller, "memory")) {
                 _cleanup_free_ char *p = NULL, *v = NULL;
 
-                if (cg_all_unified() <= 0)
+                if (cg_unified() <= 0)
                         r = cg_get_path(controller, path, "memory.usage_in_bytes", &p);
                 else
                         r = cg_get_path(controller, path, "memory.current", &p);
@@ -293,11 +270,11 @@ static int process(
                 if (g->memory > 0)
                         g->memory_valid = true;
 
-        } else if ((streq(controller, "io") && cg_all_unified() > 0) ||
-                   (streq(controller, "blkio") && cg_all_unified() <= 0)) {
+        } else if ((streq(controller, "io") && cg_unified() > 0) ||
+                   (streq(controller, "blkio") && cg_unified() <= 0)) {
                 _cleanup_fclose_ FILE *f = NULL;
                 _cleanup_free_ char *p = NULL;
-                bool unified = cg_all_unified() > 0;
+                bool unified = cg_unified() > 0;
                 uint64_t wr = 0, rd = 0;
                 nsec_t timestamp;
 
@@ -470,9 +447,6 @@ static int refresh(const char *root, Hashmap *a, Hashmap *b, unsigned iteration)
         assert(a);
 
         r = refresh_one(SYSTEMD_CGROUP_CONTROLLER, root, a, b, iteration, 0, NULL);
-        if (r < 0)
-                return r;
-        r = refresh_one("cpu", root, a, b, iteration, 0, NULL);
         if (r < 0)
                 return r;
         r = refresh_one("cpuacct", root, a, b, iteration, 0, NULL);

@@ -40,7 +40,6 @@ static int network_load_one(Manager *manager, const char *filename) {
         _cleanup_network_free_ Network *network = NULL;
         _cleanup_fclose_ FILE *file = NULL;
         char *d;
-        const char *dropin_dirname;
         Route *route;
         Address *address;
         int r;
@@ -135,26 +134,23 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->ipv6_hop_limit = -1;
         network->duid.type = _DUID_TYPE_INVALID;
         network->proxy_arp = -1;
-        network->arp = -1;
         network->ipv6_accept_ra_use_dns = true;
 
-        dropin_dirname = strjoina(network->name, ".network.d");
-
-        r = config_parse_many(filename, network_dirs, dropin_dirname,
-                              "Match\0"
-                              "Link\0"
-                              "Network\0"
-                              "Address\0"
-                              "Route\0"
-                              "DHCP\0"
-                              "DHCPv4\0" /* compat */
-                              "DHCPServer\0"
-                              "IPv6AcceptRA\0"
-                              "Bridge\0"
-                              "BridgeFDB\0"
-                              "BridgeVLAN\0",
-                              config_item_perf_lookup, network_network_gperf_lookup,
-                              false, network);
+        r = config_parse(NULL, filename, file,
+                         "Match\0"
+                         "Link\0"
+                         "Network\0"
+                         "Address\0"
+                         "Route\0"
+                         "DHCP\0"
+                         "DHCPv4\0" /* compat */
+                         "DHCPServer\0"
+                         "IPv6AcceptRA\0"
+                         "Bridge\0"
+                         "BridgeFDB\0"
+                         "BridgeVLAN\0",
+                         config_item_perf_lookup, network_network_gperf_lookup,
+                         false, false, true, network);
         if (r < 0)
                 return r;
 
@@ -398,8 +394,10 @@ int network_apply(Manager *manager, Network *network, Link *link) {
         if (!strv_isempty(network->dns) ||
             !strv_isempty(network->ntp) ||
             !strv_isempty(network->search_domains) ||
-            !strv_isempty(network->route_domains))
+            !strv_isempty(network->route_domains)) {
+                manager_dirty(manager);
                 link_dirty(link);
+        }
 
         return 0;
 }
@@ -482,10 +480,9 @@ int config_parse_netdev(const char *unit,
         case NETDEV_KIND_MACVTAP:
         case NETDEV_KIND_IPVLAN:
         case NETDEV_KIND_VXLAN:
-        case NETDEV_KIND_VCAN:
                 r = hashmap_put(network->stacked_netdevs, netdev->ifname, netdev);
                 if (r < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Can not add NetDev '%s' to network: %m", rvalue);
+                        log_syntax(unit, LOG_ERR, filename, line, r, "Can not add VLAN '%s' to network: %m", rvalue);
                         return 0;
                 }
 

@@ -56,12 +56,12 @@ static int test_unit_file_get_set(void) {
         r = unit_file_get_list(UNIT_FILE_SYSTEM, NULL, h, NULL, NULL);
 
         if (r == -EPERM || r == -EACCES) {
-                log_notice_errno(r, "Skipping test: unit_file_get_list: %m");
+                printf("Skipping test: unit_file_get_list: %s", strerror(-r));
                 return EXIT_TEST_SKIP;
         }
 
-        log_full_errno(r == 0 ? LOG_INFO : LOG_ERR, r,
-                       "unit_file_get_list: %m");
+        log_full(r == 0 ? LOG_INFO : LOG_ERR,
+                 "unit_file_get_list: %s", strerror(-r));
         if (r < 0)
                 return EXIT_FAILURE;
 
@@ -117,7 +117,7 @@ static void test_config_parse_exec(void) {
 
         r = manager_new(UNIT_FILE_USER, true, &m);
         if (MANAGER_SKIP_TEST(r)) {
-                log_notice_errno(r, "Skipping test: manager_new: %m");
+                printf("Skipping test: manager_new: %s\n", strerror(-r));
                 return;
         }
 
@@ -485,7 +485,7 @@ static void test_load_env_file_1(void) {
         char name[] = "/tmp/test-load-env-file.XXXXXX";
         _cleanup_close_ int fd;
 
-        fd = mkostemp_safe(name);
+        fd = mkostemp_safe(name, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         assert_se(write(fd, env_file_1, sizeof(env_file_1)) == sizeof(env_file_1));
 
@@ -508,7 +508,7 @@ static void test_load_env_file_2(void) {
         char name[] = "/tmp/test-load-env-file.XXXXXX";
         _cleanup_close_ int fd;
 
-        fd = mkostemp_safe(name);
+        fd = mkostemp_safe(name, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         assert_se(write(fd, env_file_2, sizeof(env_file_2)) == sizeof(env_file_2));
 
@@ -526,7 +526,7 @@ static void test_load_env_file_3(void) {
         char name[] = "/tmp/test-load-env-file.XXXXXX";
         _cleanup_close_ int fd;
 
-        fd = mkostemp_safe(name);
+        fd = mkostemp_safe(name, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         assert_se(write(fd, env_file_3, sizeof(env_file_3)) == sizeof(env_file_3));
 
@@ -542,7 +542,7 @@ static void test_load_env_file_4(void) {
         _cleanup_close_ int fd;
         int r;
 
-        fd = mkostemp_safe(name);
+        fd = mkostemp_safe(name, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         assert_se(write(fd, env_file_4, sizeof(env_file_4)) == sizeof(env_file_4));
 
@@ -562,7 +562,7 @@ static void test_load_env_file_5(void) {
         char name[] = "/tmp/test-load-env-file.XXXXXX";
         _cleanup_close_ int fd;
 
-        fd = mkostemp_safe(name);
+        fd = mkostemp_safe(name, O_RDWR|O_CLOEXEC);
         assert_se(fd >= 0);
         assert_se(write(fd, env_file_5, sizeof(env_file_5)) == sizeof(env_file_5));
 

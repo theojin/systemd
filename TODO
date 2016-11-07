@@ -23,33 +23,15 @@ External:
 
 Janitorial Clean-ups:
 
-* code cleanup: retire FOREACH_WORD_QUOTED, port to extract_first_word() loops instead.
-  For example, most conf parsing callbacks should use it.
+* code cleanup: retire FOREACH_WORD_QUOTED, port to extract_first_word() loops instead
 
 * replace manual readdir() loops with FOREACH_DIRENT or FOREACH_DIRENT_ALL
+
+* Get rid of the last strerror() invocations in favour of %m and strerror_r()
 
 * Rearrange tests so that the various test-xyz.c match a specific src/basic/xyz.c again
 
 Features:
-
-* introduce an "invocation ID" for units, that is randomly generated, and
-  identifies each runtime-cycle of a unit. It should be set freshly each time
-  we traverse inactive → activating/active, and should be the primary key to
-  map offline data (stored in the journal) with online bus objects. Let's pass
-  this as $SYSTEMD_INVOCATION_ID to services, as well as set this as xattr on
-  the cgroup of a services. The former is accessible without privileges, the
-  latter ensures the ID cannot be faked.
-
-* Introduce ProtectSystem=strict for making the entire OS hierarchy read-only
-  except for a select few
-
-* nspawn: start UID allocation loop from hash of container name
-
-* nspawn: support that /proc, /sys/, /dev are pre-mounted
-
-* define gpt header bits to select volatility mode
-
-* nspawn: mount loopback filesystems with "discard"
 
 * ProtectKernelLogs= (drops CAP_SYSLOG, add seccomp for syslog() syscall, and DeviceAllow to /dev/kmsg) in service files
 
@@ -61,11 +43,10 @@ Features:
 
 * ProtectKeyRing= to take keyring calls away
 
-* ProtectControlGroups= which mounts all of /sys/fs/cgroup read-only
+* PrivateUsers= which maps the all user ids except root and the one specified
+  in User= to nobody
 
-* ProtectKernelTunables= which mounts /sys and /proc/sys read-only
-
-* RemoveKeyRing= to remove all keyring entries of the specified user
+* Add AllocateUser= for allowing dynamic user ids per-service
 
 * Add DataDirectory=, CacheDirectory= and LogDirectory= to match
   RuntimeDirectory=, and create it as necessary when starting a service, owned by the right user.
@@ -79,28 +60,16 @@ Features:
 
 * RestrictNamespaces= or so in services (taking away the ability to create namespaces, with setns, unshare, clone)
 
+* nspawn: make /proc/sys/net writable?
+
 * make sure the ratelimit object can deal with USEC_INFINITY as way to turn off things
 
 * journalctl: make sure -f ends when the container indicated by -M terminates
 
-* mount: automatically search for "main" partition of an image has multiple
-  partitions
-
 * expose the "privileged" flag of ExecCommand on the bus, and open it up to
   transient units
 
-* in nss-systemd, if we run inside of RootDirectory= with PrivateUsers= set,
-  find a way to map the User=/Group= of the service to the right name. This way
-  a user/group for a service only has to exist on the host for the right
-  mapping to work.
-
 * allow attaching additional journald log fields to cgroups
-
-* add bus API for creating unit files in /etc, reusing the code for transient units
-
-* add bus API to remove unit files from /etc
-
-* add bus API to retrieve current unit file contents (i.e. implement "systemctl cat" on the bus only)
 
 * rework fopen_temporary() to make use of open_tmpfile_linkable() (problem: the
   kernel doesn't support linkat() that replaces existing files, currently)
@@ -112,6 +81,8 @@ Features:
 
 * journald: sigbus API via a signal-handler safe function that people may call
   from the SIGBUS handler
+
+* when using UTF8, ellipsize with "…" rather than "...", so that we can show more contents before truncating
 
 * move specifier expansion from service_spawn() into load-fragment.c
 
@@ -125,6 +96,8 @@ Features:
 * cache sd_event_now() result from before the first iteration...
 
 * add systemctl stop --job-mode=triggering that follows TRIGGERED_BY deps and adds them to the same transaction
+
+* Maybe add a way how users can "pin" units into memory, so that they are not subject to automatic GC?
 
 * PID1: find a way how we can reload unit file configuration for
   specific units only, without reloading the whole of systemd
@@ -197,7 +170,7 @@ Features:
 * synchronize console access with BSD locks:
   http://lists.freedesktop.org/archives/systemd-devel/2014-October/024582.html
 
-* as soon as we have sender timestamps, revisit coalescing multiple parallel daemon reloads:
+* as soon as we have kdbus, and sender timestamps, revisit coalescing multiple parallel daemon reloads:
   http://lists.freedesktop.org/archives/systemd-devel/2014-December/025862.html
 
 * in systemctl list-unit-files: show the install value the presets would suggest for a service in a third column
@@ -236,6 +209,10 @@ Features:
 * exponential backoff in timesyncd when we cannot reach a server
 
 * timesyncd: add ugly bus calls to set NTP servers per-interface, for usage by NM
+
+* extract_many_words() should probably be used by a lot of code that
+  currently uses FOREACH_WORD and friends. For example, most conf
+  parsing callbacks should use it.
 
 * merge ~/.local/share and ~/.local/lib into one similar /usr/lib and /usr/share....
 
@@ -635,6 +612,8 @@ Features:
     is used
 
 * machined:
+  - "machinectl list" should probably show columns for OS version and IP
+    addresses
   - add an API so that libvirt-lxc can inform us about network interfaces being
     removed or added to an existing machine
   - "machinectl migrate" or similar to copy a container from or to a
@@ -801,6 +780,7 @@ Features:
    - add reduced [Link] support to .network files
    - add Scope= parsing option for [Network]
    - properly handle routerless dhcp leases
+   - add more attribute support for SIT tunnel
    - work with non-Ethernet devices
    - add support for more bond options
    - dhcp: do we allow configuring dhcp routes on interfaces that are not the one we got the dhcp info from?
@@ -817,6 +797,7 @@ Features:
      support Name=foo*|bar*|baz ?
    - duplicate address check for static IPs (like ARPCHECK in network-scripts)
    - allow DUID/IAID to be customized, see issue #394.
+   - support configuration option for TSO (tcp segmentation offload)
    - whenever uplink info changes, make DHCP server send out FORCERENEW
 
 * networkd-wait-online:

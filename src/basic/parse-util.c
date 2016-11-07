@@ -29,7 +29,6 @@
 #include "extract-word.h"
 #include "macro.h"
 #include "parse-util.h"
-#include "process-util.h"
 #include "string-util.h"
 
 int parse_boolean(const char *v) {
@@ -534,7 +533,7 @@ int parse_fractional_part_u(const char **p, size_t digits, unsigned *res) {
         return 0;
 }
 
-int parse_percent_unbounded(const char *p) {
+int parse_percent(const char *p) {
         const char *pc, *n;
         unsigned v;
         int r;
@@ -547,30 +546,8 @@ int parse_percent_unbounded(const char *p) {
         r = safe_atou(n, &v);
         if (r < 0)
                 return r;
-
-        return (int) v;
-}
-
-int parse_percent(const char *p) {
-        int v;
-
-        v = parse_percent_unbounded(p);
         if (v > 100)
                 return -ERANGE;
 
-        return v;
-}
-
-int parse_nice(const char *p, int *ret) {
-        int n, r;
-
-        r = safe_atoi(p, &n);
-        if (r < 0)
-                return r;
-
-        if (!nice_is_valid(n))
-                return -ERANGE;
-
-        *ret = n;
-        return 0;
+        return (int) v;
 }

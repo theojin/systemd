@@ -151,7 +151,6 @@ struct Network {
         bool unicast_flood;
         unsigned cost;
 
-        bool use_br_vlan;
         uint16_t pvid;
         uint32_t br_vid_bitmap[BRIDGE_VLAN_BITMAP_LEN];
         uint32_t br_untagged_bitmap[BRIDGE_VLAN_BITMAP_LEN];
@@ -172,7 +171,6 @@ struct Network {
 
         struct ether_addr *mac;
         unsigned mtu;
-        int arp;
         uint32_t iaid;
         DUID duid;
 

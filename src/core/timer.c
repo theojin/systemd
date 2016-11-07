@@ -291,7 +291,7 @@ static int timer_coldplug(Unit *u) {
 static void timer_enter_dead(Timer *t, TimerResult f) {
         assert(t);
 
-        if (t->result == TIMER_SUCCESS)
+        if (f != TIMER_SUCCESS)
                 t->result = f;
 
         timer_set_state(t, t->result != TIMER_SUCCESS ? TIMER_FAILED : TIMER_DEAD);

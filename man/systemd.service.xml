@@ -276,12 +276,17 @@
         below (see section "Command Lines" below).
         </para>
 
-        <para>Unless <varname>Type=</varname> is <option>oneshot</option>, exactly one command must be given. When
-        <varname>Type=oneshot</varname> is used, zero or more commands may be specified. Commands may be specified by
-        providing multiple command lines in the same directive, or alternatively, this directive may be specified more
-        than once with the same effect. If the empty string is assigned to this option, the list of commands to start
-        is reset, prior assignments of this option will have no effect. If no <varname>ExecStart=</varname> is
-        specified, then the service must have <varname>RemainAfterExit=yes</varname> set.</para>
+        <para>When <varname>Type=</varname> is not
+        <option>oneshot</option>, only one command may and must be
+        given. When <varname>Type=oneshot</varname> is used, zero or
+        more commands may be specified. This can be specified by
+        providing multiple command lines in the same directive, or
+        alternatively, this directive may be specified more than once
+        with the same effect. If the empty string is assigned to this
+        option, the list of commands to start is reset, prior
+        assignments of this option will have no effect. If no
+        <varname>ExecStart=</varname> is specified, then the service
+        must have <varname>RemainAfterExit=yes</varname> set.</para>
 
         <para>For each of the specified commands, the first argument must be an absolute path to an
         executable. Optionally, if this file name is prefixed with <literal>@</literal>, the second token will be
@@ -289,7 +294,7 @@
         the absolute filename is prefixed with <literal>-</literal>, an exit code of the command normally considered a
         failure (i.e. non-zero exit status or abnormal exit due to signal) is ignored and considered success.  If the
         absolute path is prefixed with <literal>+</literal> then it is executed with full
-        privileges. <literal>@</literal>, <literal>-</literal>, and <literal>+</literal> may be used together and they
+        privileges. <literal>-</literal>, <literal>@</literal>, and <literal>+</literal> may be used together and they
         can appear in any order.</para>
 
         <para>If more than one command is specified, the commands are
@@ -424,13 +429,7 @@
         service failed to start up correctly. Commands configured with this setting need to be able to operate even if
         the service failed starting up half-way and left incompletely initialized data around. As the service's
         processes have been terminated already when the commands specified with this setting are executed they should
-        not attempt to communicate with them.</para>
-
-        <para>Note that all commands that are configured with this setting are invoked with the result code of the
-        service, as well as the main process' exit code and status, set in the <varname>$SERVICE_RESULT</varname>,
-        <varname>$EXIT_CODE</varname> and <varname>$EXIT_STATUS</varname> environment variables, see
-        <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry> for
-        details.</para></listitem>
+        not attempt to communicate with them.</para></listitem>
       </varlistentry>
 
       <varlistentry>

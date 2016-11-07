@@ -40,7 +40,6 @@
 #include "stdio-util.h"
 #include "string-util.h"
 #include "terminal-util.h"
-#include "test-helper.h"
 #include "util.h"
 #include "virt.h"
 
@@ -358,7 +357,7 @@ int main(int argc, char *argv[]) {
                 (void) parse_pid(argv[1], &pid);
                 test_get_process_comm(pid);
         } else {
-                TEST_REQ_RUNNING_SYSTEMD(test_get_process_comm(1));
+                test_get_process_comm(1);
                 test_get_process_comm(getpid());
         }
 

@@ -44,7 +44,6 @@
 #endif
 #include "strv.h"
 #include "syslog-util.h"
-#include "user-util.h"
 #include "utf8.h"
 
 BUS_DEFINE_PROPERTY_GET_ENUM(bus_property_get_exec_output, exec_output, ExecOutput);
@@ -694,8 +693,6 @@ const sd_bus_vtable bus_exec_vtable[] = {
         SD_BUS_PROPERTY("AmbientCapabilities", "t", property_get_ambient_capabilities, 0, SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("User", "s", NULL, offsetof(ExecContext, user), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("Group", "s", NULL, offsetof(ExecContext, group), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("DynamicUser", "b", bus_property_get_bool, offsetof(ExecContext, dynamic_user), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("RemoveIPC", "b", bus_property_get_bool, offsetof(ExecContext, remove_ipc), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("SupplementaryGroups", "as", NULL, offsetof(ExecContext, supplementary_groups), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("PAMName", "s", NULL, offsetof(ExecContext, pam_name), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("ReadWriteDirectories", "as", NULL, offsetof(ExecContext, read_write_paths), SD_BUS_VTABLE_PROPERTY_CONST|SD_BUS_VTABLE_HIDDEN),
@@ -706,9 +703,8 @@ const sd_bus_vtable bus_exec_vtable[] = {
         SD_BUS_PROPERTY("InaccessiblePaths", "as", NULL, offsetof(ExecContext, inaccessible_paths), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("MountFlags", "t", bus_property_get_ulong, offsetof(ExecContext, mount_flags), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("PrivateTmp", "b", bus_property_get_bool, offsetof(ExecContext, private_tmp), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("PrivateDevices", "b", bus_property_get_bool, offsetof(ExecContext, private_devices), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("PrivateNetwork", "b", bus_property_get_bool, offsetof(ExecContext, private_network), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("PrivateUsers", "b", bus_property_get_bool, offsetof(ExecContext, private_users), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("PrivateDevices", "b", bus_property_get_bool, offsetof(ExecContext, private_devices), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("ProtectHome", "s", bus_property_get_protect_home, offsetof(ExecContext, protect_home), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("ProtectSystem", "s", bus_property_get_protect_system, offsetof(ExecContext, protect_system), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("SameProcessGroup", "b", bus_property_get_bool, offsetof(ExecContext, same_pgrp), SD_BUS_VTABLE_PROPERTY_CONST),
@@ -844,9 +840,6 @@ int bus_exec_context_set_transient_property(
                 if (r < 0)
                         return r;
 
-                if (!isempty(uu) && !valid_user_group_name_or_id(uu))
-                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid user name: %s", uu);
-
                 if (mode != UNIT_CHECK) {
 
                         if (isempty(uu))
@@ -865,9 +858,6 @@ int bus_exec_context_set_transient_property(
                 r = sd_bus_message_read(message, "s", &gg);
                 if (r < 0)
                         return r;
-
-                if (!isempty(gg) && !valid_user_group_name_or_id(gg))
-                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid group name: %s", gg);
 
                 if (mode != UNIT_CHECK) {
 
@@ -937,7 +927,7 @@ int bus_exec_context_set_transient_property(
                 if (r < 0)
                         return r;
 
-                if (!nice_is_valid(n))
+                if (n < PRIO_MIN || n >= PRIO_MAX)
                         return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Nice value out of range");
 
                 if (mode != UNIT_CHECK) {
@@ -1070,9 +1060,8 @@ int bus_exec_context_set_transient_property(
 
         } else if (STR_IN_SET(name,
                               "IgnoreSIGPIPE", "TTYVHangup", "TTYReset",
-                              "PrivateTmp", "PrivateDevices", "PrivateNetwork", "PrivateUsers",
-                              "NoNewPrivileges", "SyslogLevelPrefix", "MemoryDenyWriteExecute",
-                              "RestrictRealtime", "DynamicUser", "RemoveIPC")) {
+                              "PrivateTmp", "PrivateDevices", "PrivateNetwork",
+                              "NoNewPrivileges", "SyslogLevelPrefix", "MemoryDenyWriteExecute", "RestrictRealtime")) {
                 int b;
 
                 r = sd_bus_message_read(message, "b", &b);
@@ -1092,8 +1081,6 @@ int bus_exec_context_set_transient_property(
                                 c->private_devices = b;
                         else if (streq(name, "PrivateNetwork"))
                                 c->private_network = b;
-                        else if (streq(name, "PrivateUsers"))
-                                c->private_users = b;
                         else if (streq(name, "NoNewPrivileges"))
                                 c->no_new_privileges = b;
                         else if (streq(name, "SyslogLevelPrefix"))
@@ -1102,10 +1089,6 @@ int bus_exec_context_set_transient_property(
                                 c->memory_deny_write_execute = b;
                         else if (streq(name, "RestrictRealtime"))
                                 c->restrict_realtime = b;
-                        else if (streq(name, "DynamicUser"))
-                                c->dynamic_user = b;
-                        else if (streq(name, "RemoveIPC"))
-                                c->remove_ipc = b;
 
                         unit_write_drop_in_private_format(u, mode, name, "%s=%s", name, yes_no(b));
                 }

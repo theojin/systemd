@@ -28,7 +28,6 @@ Match.KernelCommandLine,                config_parse_net_condition,             
 Match.Architecture,                     config_parse_net_condition,                     CONDITION_ARCHITECTURE,        offsetof(Network, match_arch)
 Link.MACAddress,                        config_parse_hwaddr,                            0,                             offsetof(Network, mac)
 Link.MTUBytes,                          config_parse_iec_size,                          0,                             offsetof(Network, mtu)
-Link.ARP,                               config_parse_tristate,                          0,                             offsetof(Network, arp)
 Network.Description,                    config_parse_string,                            0,                             offsetof(Network, description)
 Network.Bridge,                         config_parse_netdev,                            0,                             offsetof(Network, bridge)
 Network.Bond,                           config_parse_netdev,                            0,                             offsetof(Network, bond)
@@ -115,7 +114,7 @@ Bridge.AllowPortToBeRoot,               config_parse_bool,                      
 Bridge.UnicastFlood,                    config_parse_bool,                              0,                             offsetof(Network, unicast_flood)
 BridgeFDB.MACAddress,                   config_parse_fdb_hwaddr,                        0,                             0
 BridgeFDB.VLANId,                       config_parse_fdb_vlan_id,                       0,                             0
-BridgeVLAN.PVID,                        config_parse_brvlan_pvid,                       0,                             0
+BridgeVLAN.PVID,                        config_parse_vlanid,                            0,                             offsetof(Network, pvid)
 BridgeVLAN.VLAN,                        config_parse_brvlan_vlan,                       0,                             0
 BridgeVLAN.EgressUntagged,              config_parse_brvlan_untagged,                   0,                             0
 /* backwards compatibility: do not add new entries to this section */

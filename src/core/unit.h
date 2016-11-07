@@ -108,10 +108,6 @@ struct Unit {
         /* The slot used for watching NameOwnerChanged signals */
         sd_bus_slot *match_bus_slot;
 
-        /* References to this unit from clients */
-        sd_bus_track *bus_track;
-        char **deserialized_refs;
-
         /* Job timeout and action to take */
         usec_t job_timeout;
         FailureAction job_timeout_action;
@@ -184,17 +180,12 @@ struct Unit {
         /* Make sure we never enter endless loops with the check unneeded logic, or the BindsTo= logic */
         RateLimit auto_stop_ratelimit;
 
-        /* Reference to a specific UID/GID */
-        uid_t ref_uid;
-        gid_t ref_gid;
-
         /* Cached unit file state and preset */
         UnitFileState unit_file_state;
         int unit_file_preset;
 
-        /* Where the cpu.stat or cpuacct.usage was at the time the unit was started */
-        nsec_t cpu_usage_base;
-        nsec_t cpu_usage_last; /* the most recently read value */
+        /* Where the cpuacct.usage cgroup counter was at the time the unit was started */
+        nsec_t cpuacct_usage_base;
 
         /* Counterparts in the cgroup filesystem */
         char *cgroup_path;
@@ -203,6 +194,8 @@ struct Unit {
         CGroupMask cgroup_subtree_mask;
         CGroupMask cgroup_members_mask;
         int cgroup_inotify_wd;
+
+        uint32_t cgroup_netclass_id;
 
         /* How to start OnFailure units */
         JobMode on_failure_job_mode;
@@ -252,9 +245,6 @@ struct Unit {
 
         /* Did we already invoke unit_coldplug() for this unit? */
         bool coldplugged:1;
-
-        /* For transient units: whether to add a bus track reference after creating the unit */
-        bool bus_track_add:1;
 };
 
 struct UnitStatusMessageFormats {
@@ -300,10 +290,6 @@ struct UnitVTable {
          * pointer to ExecRuntime is found, if the unit type has
          * that */
         size_t exec_runtime_offset;
-
-        /* If greater than 0, the offset into the object where the pointer to DynamicCreds is found, if the unit type
-         * has that. */
-        size_t dynamic_creds_offset;
 
         /* The name of the configuration file section with the private settings of this unit */
         const char *private_section;
@@ -383,7 +369,8 @@ struct UnitVTable {
         /* Called whenever a process of this unit sends us a message */
         void (*notify_message)(Unit *u, pid_t pid, char **tags, FDSet *fds);
 
-        /* Called whenever a name this Unit registered for comes or goes away. */
+        /* Called whenever a name this Unit registered for comes or
+         * goes away. */
         void (*bus_name_owner_change)(Unit *u, const char *name, const char *old_owner, const char *new_owner);
 
         /* Called for each property that is being set */
@@ -602,7 +589,6 @@ CGroupContext *unit_get_cgroup_context(Unit *u) _pure_;
 ExecRuntime *unit_get_exec_runtime(Unit *u) _pure_;
 
 int unit_setup_exec_runtime(Unit *u);
-int unit_setup_dynamic_creds(Unit *u);
 
 int unit_write_drop_in(Unit *u, UnitSetPropertiesMode mode, const char *name, const char *data);
 int unit_write_drop_in_format(Unit *u, UnitSetPropertiesMode mode, const char *name, const char *format, ...) _printf_(4,5);
@@ -632,22 +618,11 @@ int unit_fail_if_symlink(Unit *u, const char* where);
 
 int unit_start_limit_test(Unit *u);
 
-void unit_unref_uid(Unit *u, bool destroy_now);
-int unit_ref_uid(Unit *u, uid_t uid, bool clean_ipc);
-
-void unit_unref_gid(Unit *u, bool destroy_now);
-int unit_ref_gid(Unit *u, gid_t gid, bool clean_ipc);
-
-int unit_ref_uid_gid(Unit *u, uid_t uid, gid_t gid);
-void unit_unref_uid_gid(Unit *u, bool destroy_now);
-
-void unit_notify_user_lookup(Unit *u, uid_t uid, gid_t gid);
-
 /* Macros which append UNIT= or USER_UNIT= to the message */
 
 #define log_unit_full(unit, level, error, ...)                          \
         ({                                                              \
-                const Unit *_u = (unit);                                \
+                Unit *_u = (unit);                                      \
                 _u ? log_object_internal(level, error, __FILE__, __LINE__, __func__, _u->manager->unit_log_field, _u->id, ##__VA_ARGS__) : \
                         log_internal(level, error, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         })

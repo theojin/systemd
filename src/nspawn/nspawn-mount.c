@@ -21,9 +21,8 @@
 #include <linux/magic.h>
 
 #include "alloc-util.h"
+#include "cgroup-util.h"
 #include "escape.h"
-#include "fd-util.h"
-#include "fileio.h"
 #include "fs-util.h"
 #include "label.h"
 #include "mkdir.h"
@@ -182,15 +181,13 @@ int tmpfs_mount_parse(CustomMount **l, unsigned *n, const char *s) {
 
 static int tmpfs_patch_options(
                 const char *options,
-                bool userns,
-                uid_t uid_shift, uid_t uid_range,
-                bool patch_ids,
+                bool userns, uid_t uid_shift, uid_t uid_range,
                 const char *selinux_apifs_context,
                 char **ret) {
 
         char *buf = NULL;
 
-        if ((userns && uid_shift != 0) || patch_ids) {
+        if (userns && uid_shift != 0) {
                 assert(uid_shift != UID_INVALID);
 
                 if (options)
@@ -221,13 +218,7 @@ static int tmpfs_patch_options(
         }
 #endif
 
-        if (!buf && options) {
-                buf = strdup(options);
-                if (!buf)
-                        return -ENOMEM;
-        }
         *ret = buf;
-
         return !!buf;
 }
 
@@ -280,15 +271,7 @@ int mount_sysfs(const char *dest) {
                 return log_error_errno(errno, "Failed to remove %s: %m", full);
 
         x = prefix_roota(top, "/fs/kdbus");
-        (void) mkdir_p(x, 0755);
-
-        /* Create mountpoint for cgroups. Otherwise we are not allowed since we
-         * remount /sys read-only.
-         */
-        if (cg_ns_supported()) {
-                x = prefix_roota(top, "/fs/cgroup");
-                (void) mkdir_p(x, 0755);
-        }
+        (void) mkdir(x, 0755);
 
         if (mount(NULL, top, NULL, MS_BIND|MS_RDONLY|MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_REMOUNT, NULL) < 0)
                 return log_error_errno(errno, "Failed to make %s read-only: %m", top);
@@ -366,7 +349,7 @@ int mount_all(const char *dest,
 
                 o = mount_table[k].options;
                 if (streq_ptr(mount_table[k].type, "tmpfs")) {
-                        r = tmpfs_patch_options(o, use_userns, uid_shift, uid_range, false, selinux_apifs_context, &options);
+                        r = tmpfs_patch_options(o, use_userns, uid_shift, uid_range, selinux_apifs_context, &options);
                         if (r < 0)
                                 return log_oom();
                         if (r > 0)
@@ -503,7 +486,7 @@ static int mount_tmpfs(
         if (r < 0 && r != -EEXIST)
                 return log_error_errno(r, "Creating mount point for tmpfs %s failed: %m", where);
 
-        r = tmpfs_patch_options(m->options, userns, uid_shift, uid_range, false, selinux_apifs_context, &buf);
+        r = tmpfs_patch_options(m->options, userns, uid_shift, uid_range, selinux_apifs_context, &buf);
         if (r < 0)
                 return log_oom();
         options = r > 0 ? buf : m->options;
@@ -618,50 +601,7 @@ int mount_custom(
         return 0;
 }
 
-/* Retrieve existing subsystems. This function is called in a new cgroup
- * namespace.
- */
-static int get_controllers(Set *subsystems) {
-        _cleanup_fclose_ FILE *f = NULL;
-        char line[LINE_MAX];
-
-        assert(subsystems);
-
-        f = fopen("/proc/self/cgroup", "re");
-        if (!f)
-                return errno == ENOENT ? -ESRCH : -errno;
-
-        FOREACH_LINE(line, f, return -errno) {
-                int r;
-                char *e, *l, *p;
-
-                truncate_nl(line);
-
-                l = strchr(line, ':');
-                if (!l)
-                        continue;
-
-                l++;
-                e = strchr(l, ':');
-                if (!e)
-                        continue;
-
-                *e = 0;
-
-                if (streq(l, "") || streq(l, "name=systemd"))
-                        continue;
-
-                p = strdup(l);
-                r = set_consume(subsystems, p);
-                if (r < 0)
-                        return r;
-        }
-
-        return 0;
-}
-
-static int mount_legacy_cgroup_hierarchy(const char *dest, const char *controller, const char *hierarchy,
-                                         CGroupUnified unified_requested, bool read_only) {
+static int mount_legacy_cgroup_hierarchy(const char *dest, const char *controller, const char *hierarchy, bool read_only) {
         char *to;
         int r;
 
@@ -677,15 +617,7 @@ static int mount_legacy_cgroup_hierarchy(const char *dest, const char *controlle
 
         /* The superblock mount options of the mount point need to be
          * identical to the hosts', and hence writable... */
-        if (streq(controller, SYSTEMD_CGROUP_CONTROLLER)) {
-                if (unified_requested >= CGROUP_UNIFIED_SYSTEMD)
-                        r = mount("cgroup", to, "cgroup2", MS_NOSUID|MS_NOEXEC|MS_NODEV, NULL);
-                else
-                        r = mount("cgroup", to, "cgroup", MS_NOSUID|MS_NOEXEC|MS_NODEV, "none,name=systemd,xattr");
-        } else
-                r = mount("cgroup", to, "cgroup", MS_NOSUID|MS_NOEXEC|MS_NODEV, controller);
-
-        if (r < 0)
+        if (mount("cgroup", to, "cgroup", MS_NOSUID|MS_NOEXEC|MS_NODEV, controller) < 0)
                 return log_error_errno(errno, "Failed to mount to %s: %m", to);
 
         /* ... hence let's only make the bind mount read-only, not the
@@ -697,107 +629,11 @@ static int mount_legacy_cgroup_hierarchy(const char *dest, const char *controlle
         return 1;
 }
 
-/* Mount a legacy cgroup hierarchy when cgroup namespaces are supported. */
-static int mount_legacy_cgns_supported(
-                CGroupUnified unified_requested, bool userns, uid_t uid_shift,
-                uid_t uid_range, const char *selinux_apifs_context) {
-        _cleanup_set_free_free_ Set *controllers = NULL;
-        const char *cgroup_root = "/sys/fs/cgroup", *c;
-        int r;
-
-        (void) mkdir_p(cgroup_root, 0755);
-
-        /* Mount a tmpfs to /sys/fs/cgroup if it's not mounted there yet. */
-        r = path_is_mount_point(cgroup_root, AT_SYMLINK_FOLLOW);
-        if (r < 0)
-                return log_error_errno(r, "Failed to determine if /sys/fs/cgroup is already mounted: %m");
-        if (r == 0) {
-                _cleanup_free_ char *options = NULL;
-
-                /* When cgroup namespaces are enabled and user namespaces are
-                 * used then the mount of the cgroupfs is done *inside* the new
-                 * user namespace. We're root in the new user namespace and the
-                 * kernel will happily translate our uid/gid to the correct
-                 * uid/gid as seen from e.g. /proc/1/mountinfo. So we simply
-                 * pass uid 0 and not uid_shift to tmpfs_patch_options().
-                 */
-                r = tmpfs_patch_options("mode=755", userns, 0, uid_range, true, selinux_apifs_context, &options);
-                if (r < 0)
-                        return log_oom();
-
-                if (mount("tmpfs", cgroup_root, "tmpfs", MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME, options) < 0)
-                        return log_error_errno(errno, "Failed to mount /sys/fs/cgroup: %m");
-        }
-
-        if (cg_all_unified() > 0)
-                goto skip_controllers;
-
-        controllers = set_new(&string_hash_ops);
-        if (!controllers)
-                return log_oom();
-
-        r = get_controllers(controllers);
-        if (r < 0)
-                return log_error_errno(r, "Failed to determine cgroup controllers: %m");
-
-        for (;;) {
-                _cleanup_free_ const char *controller = NULL;
-
-                controller = set_steal_first(controllers);
-                if (!controller)
-                        break;
-
-                r = mount_legacy_cgroup_hierarchy("", controller, controller, unified_requested, !userns);
-                if (r < 0)
-                        return r;
-
-                /* When multiple hierarchies are co-mounted, make their
-                 * constituting individual hierarchies a symlink to the
-                 * co-mount.
-                 */
-                c = controller;
-                for (;;) {
-                        _cleanup_free_ char *target = NULL, *tok = NULL;
-
-                        r = extract_first_word(&c, &tok, ",", 0);
-                        if (r < 0)
-                                return log_error_errno(r, "Failed to extract co-mounted cgroup controller: %m");
-                        if (r == 0)
-                                break;
-
-                        target = prefix_root("/sys/fs/cgroup", tok);
-                        if (!target)
-                                return log_oom();
-
-                        if (streq(controller, tok))
-                                break;
-
-                        r = symlink_idempotent(controller, target);
-                        if (r == -EINVAL)
-                                return log_error_errno(r, "Invalid existing symlink for combined hierarchy: %m");
-                        if (r < 0)
-                                return log_error_errno(r, "Failed to create symlink for combined hierarchy: %m");
-                }
-        }
-
-skip_controllers:
-        r = mount_legacy_cgroup_hierarchy("", SYSTEMD_CGROUP_CONTROLLER, "systemd", unified_requested, false);
-        if (r < 0)
-                return r;
-
-        if (!userns) {
-                if (mount(NULL, cgroup_root, NULL, MS_REMOUNT|MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME|MS_RDONLY, "mode=755") < 0)
-                        return log_error_errno(errno, "Failed to remount %s read-only: %m", cgroup_root);
-        }
-
-        return 0;
-}
-
-/* Mount legacy cgroup hierarchy when cgroup namespaces are unsupported. */
-static int mount_legacy_cgns_unsupported(
+static int mount_legacy_cgroups(
                 const char *dest,
-                CGroupUnified unified_requested, bool userns, uid_t uid_shift, uid_t uid_range,
+                bool userns, uid_t uid_shift, uid_t uid_range,
                 const char *selinux_apifs_context) {
+
         _cleanup_set_free_free_ Set *controllers = NULL;
         const char *cgroup_root;
         int r;
@@ -813,7 +649,7 @@ static int mount_legacy_cgns_unsupported(
         if (r == 0) {
                 _cleanup_free_ char *options = NULL;
 
-                r = tmpfs_patch_options("mode=755", userns, uid_shift, uid_range, false, selinux_apifs_context, &options);
+                r = tmpfs_patch_options("mode=755", userns, uid_shift, uid_range, selinux_apifs_context, &options);
                 if (r < 0)
                         return log_oom();
 
@@ -821,7 +657,7 @@ static int mount_legacy_cgns_unsupported(
                         return log_error_errno(errno, "Failed to mount /sys/fs/cgroup: %m");
         }
 
-        if (cg_all_unified() > 0)
+        if (cg_unified() > 0)
                 goto skip_controllers;
 
         controllers = set_new(&string_hash_ops);
@@ -847,7 +683,7 @@ static int mount_legacy_cgns_unsupported(
                 if (r == -EINVAL) {
                         /* Not a symbolic link, but directly a single cgroup hierarchy */
 
-                        r = mount_legacy_cgroup_hierarchy(dest, controller, controller, unified_requested, true);
+                        r = mount_legacy_cgroup_hierarchy(dest, controller, controller, true);
                         if (r < 0)
                                 return r;
 
@@ -867,20 +703,22 @@ static int mount_legacy_cgns_unsupported(
                                 continue;
                         }
 
-                        r = mount_legacy_cgroup_hierarchy(dest, combined, combined, unified_requested, true);
+                        r = mount_legacy_cgroup_hierarchy(dest, combined, combined, true);
                         if (r < 0)
                                 return r;
 
                         r = symlink_idempotent(combined, target);
-                        if (r == -EINVAL)
-                                return log_error_errno(r, "Invalid existing symlink for combined hierarchy: %m");
+                        if (r == -EINVAL) {
+                                log_error("Invalid existing symlink for combined hierarchy");
+                                return r;
+                        }
                         if (r < 0)
                                 return log_error_errno(r, "Failed to create symlink for combined hierarchy: %m");
                 }
         }
 
 skip_controllers:
-        r = mount_legacy_cgroup_hierarchy(dest, SYSTEMD_CGROUP_CONTROLLER, "systemd", unified_requested, false);
+        r = mount_legacy_cgroup_hierarchy(dest, "none,name=systemd,xattr", "systemd", false);
         if (r < 0)
                 return r;
 
@@ -922,22 +760,19 @@ static int mount_unified_cgroups(const char *dest) {
 
 int mount_cgroups(
                 const char *dest,
-                CGroupUnified unified_requested,
+                bool unified_requested,
                 bool userns, uid_t uid_shift, uid_t uid_range,
-                const char *selinux_apifs_context,
-                bool use_cgns) {
+                const char *selinux_apifs_context) {
 
-        if (unified_requested >= CGROUP_UNIFIED_ALL)
+        if (unified_requested)
                 return mount_unified_cgroups(dest);
-        else if (use_cgns && cg_ns_supported())
-                return mount_legacy_cgns_supported(unified_requested, userns, uid_shift, uid_range, selinux_apifs_context);
-
-        return mount_legacy_cgns_unsupported(dest, unified_requested, userns, uid_shift, uid_range, selinux_apifs_context);
+        else
+                return mount_legacy_cgroups(dest, userns, uid_shift, uid_range, selinux_apifs_context);
 }
 
 int mount_systemd_cgroup_writable(
                 const char *dest,
-                CGroupUnified unified_requested) {
+                bool unified_requested) {
 
         _cleanup_free_ char *own_cgroup_path = NULL;
         const char *systemd_root, *systemd_own;
@@ -953,7 +788,7 @@ int mount_systemd_cgroup_writable(
         if (path_equal(own_cgroup_path, "/"))
                 return 0;
 
-        if (unified_requested >= CGROUP_UNIFIED_ALL) {
+        if (unified_requested) {
                 systemd_own = strjoina(dest, "/sys/fs/cgroup", own_cgroup_path);
                 systemd_root = prefix_roota(dest, "/sys/fs/cgroup");
         } else {
@@ -1000,7 +835,7 @@ int setup_volatile_state(
                 return log_error_errno(errno, "Failed to create %s: %m", directory);
 
         options = "mode=755";
-        r = tmpfs_patch_options(options, userns, uid_shift, uid_range, false, selinux_apifs_context, &buf);
+        r = tmpfs_patch_options(options, userns, uid_shift, uid_range, selinux_apifs_context, &buf);
         if (r < 0)
                 return log_oom();
         if (r > 0)
@@ -1036,7 +871,7 @@ int setup_volatile(
                 return log_error_errno(errno, "Failed to create temporary directory: %m");
 
         options = "mode=755";
-        r = tmpfs_patch_options(options, userns, uid_shift, uid_range, false, selinux_apifs_context, &buf);
+        r = tmpfs_patch_options(options, userns, uid_shift, uid_range, selinux_apifs_context, &buf);
         if (r < 0)
                 return log_oom();
         if (r > 0)

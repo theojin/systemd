@@ -1016,19 +1016,19 @@ static int map_basic(sd_bus *bus, const char *member, sd_bus_message *m, sd_bus_
                 return r;
 
         switch (type) {
-
         case SD_BUS_TYPE_STRING: {
-                char **p = userdata;
                 const char *s;
+                char **p = userdata;
 
                 r = sd_bus_message_read_basic(m, type, &s);
                 if (r < 0)
-                        return r;
+                        break;
 
                 if (isempty(s))
-                        s = NULL;
+                        break;
 
-                return free_and_strdup(p, s);
+                r = free_and_strdup(p, s);
+                break;
         }
 
         case SD_BUS_TYPE_ARRAY: {
@@ -1037,12 +1037,13 @@ static int map_basic(sd_bus *bus, const char *member, sd_bus_message *m, sd_bus_
 
                 r = bus_message_read_strv_extend(m, &l);
                 if (r < 0)
-                        return r;
+                        break;
 
                 strv_free(*p);
                 *p = l;
                 l = NULL;
-                return 0;
+
+                break;
         }
 
         case SD_BUS_TYPE_BOOLEAN: {
@@ -1051,48 +1052,57 @@ static int map_basic(sd_bus *bus, const char *member, sd_bus_message *m, sd_bus_
 
                 r = sd_bus_message_read_basic(m, type, &b);
                 if (r < 0)
-                        return r;
+                        break;
 
                 *p = b;
-                return 0;
+
+                break;
         }
 
-        case SD_BUS_TYPE_INT32:
         case SD_BUS_TYPE_UINT32: {
-                uint32_t u, *p = userdata;
+                uint32_t u;
+                uint32_t *p = userdata;
 
                 r = sd_bus_message_read_basic(m, type, &u);
                 if (r < 0)
-                        return r;
+                        break;
 
                 *p = u;
-                return 0;
+
+                break;
         }
 
-        case SD_BUS_TYPE_INT64:
         case SD_BUS_TYPE_UINT64: {
-                uint64_t t, *p = userdata;
+                uint64_t t;
+                uint64_t *p = userdata;
 
                 r = sd_bus_message_read_basic(m, type, &t);
                 if (r < 0)
-                        return r;
+                        break;
 
                 *p = t;
-                return 0;
+
+                break;
         }
 
         case SD_BUS_TYPE_DOUBLE: {
-                double d, *p = userdata;
+                double d;
+                double *p = userdata;
 
                 r = sd_bus_message_read_basic(m, type, &d);
                 if (r < 0)
-                        return r;
+                        break;
 
                 *p = d;
-                return 0;
-        }}
 
-        return -EOPNOTSUPP;
+                break;
+        }
+
+        default:
+                break;
+        }
+
+        return r;
 }
 
 int bus_message_map_all_properties(
@@ -1230,13 +1240,12 @@ int bus_map_all_properties(
         return bus_message_map_all_properties(m, map, userdata);
 }
 
-int bus_connect_transport(BusTransport transport, const char *host, bool user, sd_bus **ret) {
-        _cleanup_(sd_bus_unrefp) sd_bus *bus = NULL;
+int bus_connect_transport(BusTransport transport, const char *host, bool user, sd_bus **bus) {
         int r;
 
         assert(transport >= 0);
         assert(transport < _BUS_TRANSPORT_MAX);
-        assert(ret);
+        assert(bus);
 
         assert_return((transport == BUS_TRANSPORT_LOCAL) == !host, -EINVAL);
         assert_return(transport == BUS_TRANSPORT_LOCAL || !user, -EOPNOTSUPP);
@@ -1245,34 +1254,25 @@ int bus_connect_transport(BusTransport transport, const char *host, bool user, s
 
         case BUS_TRANSPORT_LOCAL:
                 if (user)
-                        r = sd_bus_default_user(&bus);
+                        r = sd_bus_default_user(bus);
                 else
-                        r = sd_bus_default_system(&bus);
+                        r = sd_bus_default_system(bus);
 
                 break;
 
         case BUS_TRANSPORT_REMOTE:
-                r = sd_bus_open_system_remote(&bus, host);
+                r = sd_bus_open_system_remote(bus, host);
                 break;
 
         case BUS_TRANSPORT_MACHINE:
-                r = sd_bus_open_system_machine(&bus, host);
+                r = sd_bus_open_system_machine(bus, host);
                 break;
 
         default:
                 assert_not_reached("Hmm, unknown transport type.");
         }
-        if (r < 0)
-                return r;
 
-        r = sd_bus_set_exit_on_disconnect(bus, true);
-        if (r < 0)
-                return r;
-
-        *ret = bus;
-        bus = NULL;
-
-        return 0;
+        return r;
 }
 
 int bus_connect_transport_systemd(BusTransport transport, const char *host, bool user, sd_bus **bus) {
