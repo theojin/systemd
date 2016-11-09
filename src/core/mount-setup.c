@@ -91,9 +91,9 @@ static const MountPoint mount_table[] = {
         { "devpts",      "/dev/pts",                  "devpts",     "mode=620,gid=" STRINGIFY(TTY_GID), MS_NOSUID|MS_NOEXEC,
           NULL,          MNT_IN_CONTAINER           },
 #ifdef HAVE_SMACK
-        { "tmpfs",      "/run",                      "tmpfs",      "mode=755,smackfstransmute=System::Run", MS_NOSUID|MS_NODEV|MS_STRICTATIME,
+        { "tmpfs",      "/run",                       "tmpfs",      "mode=755,smackfstransmute=System::Run", MS_NOSUID|MS_NODEV|MS_STRICTATIME,
           mac_smack_use,  MNT_FATAL },
-        { "tmpfs",      "/sys/fs/cgroup",            "tmpfs",      "mode=755,smackfsroot=*", MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME,
+        { "tmpfs",      "/sys/fs/cgroup",             "tmpfs",      "mode=755,smackfsroot=*", MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME,
           mac_smack_use,  MNT_IN_CONTAINER },
 #else
         { "tmpfs",       "/run",                      "tmpfs",      "mode=755",                MS_NOSUID|MS_NODEV|MS_STRICTATIME,
@@ -102,6 +102,7 @@ static const MountPoint mount_table[] = {
           cg_is_unified_wanted, MNT_FATAL|MNT_IN_CONTAINER },
         { "tmpfs",       "/sys/fs/cgroup",            "tmpfs",      "mode=755",                MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME,
           cg_is_legacy_wanted, MNT_FATAL|MNT_IN_CONTAINER },
+#endif
         { "cgroup",      "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd,xattr", MS_NOSUID|MS_NOEXEC|MS_NODEV,
           cg_is_legacy_wanted, MNT_IN_CONTAINER           },
         { "cgroup",      "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd",       MS_NOSUID|MS_NOEXEC|MS_NODEV,
@@ -332,7 +333,7 @@ int mount_cgroup_controllers(char ***join_controllers) {
                                 } else if (errno != EEXIST)
                                         return log_error_errno(errno, "Failed to create symlink %s: %m", t);
 
-                                r = mac_smack_apply(t, "*");
+                                r = mac_smack_apply(t, SMACK_ATTR_ACCESS, "*");
                                 if (r < 0)
                                         log_error_errno(r, "Failed to set SMACK label '%s': %m", t);
 
