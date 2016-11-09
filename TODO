@@ -205,6 +205,8 @@ Features:
 
 * cache sd_event_now() result from before the first iteration...
 
+* remove Capabilities=, after all AmbientCapabilities= and CapabilityBoundingSet= should be enough.
+
 * add systemctl stop --job-mode=triggering that follows TRIGGERED_BY deps and adds them to the same transaction
 
 * PID1: find a way how we can reload unit file configuration for
