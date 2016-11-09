@@ -15,7 +15,7 @@
 %define WITH_MACHINED 0
 
 Name:           systemd
-Version:        219
+Version:        231
 Release:        0%{?release_flags}
 # For a breakdown of the licensing, see README
 License:        LGPL-2.1+ and MIT and GPL-2.0+
@@ -76,6 +76,7 @@ License:        LGPL-2.1+ and MIT
 Summary:        Systemd libraries
 Group:          Base/Startup
 Obsoletes:      libudev < 183
+Provides:       libudev = %{version}
 Obsoletes:      systemd < 185-4
 Conflicts:      systemd < 185-4
 
@@ -104,24 +105,6 @@ Obsoletes:      systemd < 38-5
 initialization at boot.
 'systemd-analyze plot' renders an SVG visualizing the parallel start of units
 at boot.
-
-%package -n libgudev
-License:        LGPL-2.1+
-Summary:        Libraries for adding libudev support to applications that use glib
-Requires:       %{name} = %{version}
-
-%description -n libgudev
-This package contains the libraries that make it easier to use libudev
-functionality from applications that use glib.
-
-%package -n libgudev-devel
-License:        LGPL-2.1+
-Summary:        Header files for adding libudev support to applications that use glib
-Requires:       libgudev = %{version}
-
-%description -n libgudev-devel
-This package contains the header and pkg-config files for developing
-glib-based applications using libudev functionality.
 
 %package tests
 License:        LGPL-2.1+ and Apache-2.0
@@ -157,7 +140,6 @@ cp %{SOURCE4} .
 	--disable-rfkill \
 %endif
         --enable-compat-libs \
-        --enable-bootchart \
         --disable-hwdb \
         --disable-sysusers \
         --disable-firstboot \
@@ -191,11 +173,16 @@ make %{?_smp_mflags} \
 %make_install
 %find_lang %{name}
 cat <<EOF >> systemd.lang
+%lang(be) /usr/lib/systemd/catalog/systemd.be.catalog
+%lang(be) /usr/lib/systemd/catalog/systemd.be@latin.catalog
+%lang(bg) /usr/lib/systemd/catalog/systemd.bg.catalog
 %lang(fr) /usr/lib/systemd/catalog/systemd.fr.catalog
 %lang(it) /usr/lib/systemd/catalog/systemd.it.catalog
-%lang(ru) /usr/lib/systemd/catalog/systemd.ru.catalog
 %lang(pl) /usr/lib/systemd/catalog/systemd.pl.catalog
 %lang(pt_BR) /usr/lib/systemd/catalog/systemd.pt_BR.catalog
+%lang(ru) /usr/lib/systemd/catalog/systemd.ru.catalog
+%lang(zh) /usr/lib/systemd/catalog/systemd.zh_CN.catalog
+%lang(zh) /usr/lib/systemd/catalog/systemd.zh_TW.catalog
 EOF
 
 # udev links
@@ -223,12 +210,6 @@ EOF
 # they are not owned and hence overriden by rpm after the used deleted
 # them.
 /usr/bin/rm -r %{buildroot}%{_sysconfdir}/systemd/system/*.target.wants
-
-# Make sure the ghost-ing below works
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel2.target
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel3.target
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel4.target
-/usr/bin/touch %{buildroot}%{_sysconfdir}/systemd/system/runlevel5.target
 
 # Make sure these directories are properly owned
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system/basic.target.wants
@@ -317,6 +298,17 @@ mkdir -p %{buildroot}/%{_localstatedir}/log/journal
 install -m 755 -d %{buildroot}%{_datadir}/upgrade/scripts
 install -m 755 %{SOURCE3} %{buildroot}%{_datadir}/upgrade/scripts
 
+%if ! %{with kdbus}
+rm -f  %{buildroot}/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
+rm -f  %{buildroot}/usr/include/systemd/sd-bus-protocol.h
+rm -f  %{buildroot}/usr/include/systemd/sd-bus-vtable.h
+rm -f  %{buildroot}/usr/include/systemd/sd-bus.h
+rm -f  %{buildroot}/usr/include/systemd/sd-event.h
+rm -f  %{buildroot}/usr/lib/systemd/system-generators/systemd-dbus1-generator
+rm -f  %{buildroot}/usr/lib/systemd/user-generators/systemd-dbus1-generator
+rm -f  %{buildroot}/usr/lib/systemd/user/busnames.target
+%endif
+
 # end of install
 %pre
 /usr/bin/getent group cdrom >/dev/null 2>&1 || /usr/sbin/groupadd -r -g 11 cdrom >/dev/null 2>&1 || :
@@ -356,10 +348,6 @@ fi
 
 %post -n libsystemd -p /sbin/ldconfig
 %postun -n libsystemd  -p /sbin/ldconfig
-
-%post -n libgudev -p /sbin/ldconfig
-%postun -n libgudev -p /sbin/ldconfig
-
 
 %lang_package
 
@@ -430,7 +418,6 @@ fi
 %if %{?WITH_MACHINED}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.machine1.conf
 %endif
-%config(noreplace) %{_sysconfdir}/systemd/bootchart.conf
 %if %{?WITH_COREDUMP}
 %config(noreplace) %{_sysconfdir}/systemd/coredump.conf
 %endif
@@ -457,6 +444,7 @@ fi
 %{_bindir}/systemd-ask-password
 %{_bindir}/systemd-tty-ask-password-agent
 %{_bindir}/systemd-machine-id-setup
+%{_bindir}/systemd-socket-activate
 %if %{?with_multiuser}
 %{_bindir}/loginctl
 %{_bindir}/systemd-loginctl
@@ -479,6 +467,7 @@ fi
 %{_prefix}/lib/sysctl.d/*.conf
 %{_prefix}/lib/systemd/systemd
 %{_prefix}/lib/systemd/system
+%exclude %{_prefix}/lib/systemd/resolv.conf
 
 %dir %{_prefix}/lib/systemd/system/basic.target.wants
 %dir %{_prefix}/lib/systemd/user
@@ -499,10 +488,13 @@ fi
 %endif
 %exclude %{_prefix}/lib/systemd/network/80-container-ve.network
 %exclude %{_prefix}/lib/systemd/network/80-container-host0.network
+%exclude %{_prefix}/lib/systemd/network/80-container-vz.network
 %{_prefix}/lib/systemd/user/default.target
 %{_prefix}/lib/systemd/network/99-default.link
 %exclude %{_prefix}/lib/systemd/system-preset/90-systemd.preset
 
+%{_prefix}/lib/systemd/libsystemd-shared-231.so
+%{_prefix}/lib/systemd/libsystemd-shared.so
 %{_prefix}/lib/systemd/systemd-*
 %dir %{_prefix}/lib/systemd/catalog
 %{_prefix}/lib/systemd/catalog/systemd.catalog
@@ -514,14 +506,17 @@ fi
 %{_prefix}/lib/systemd/user-generators/systemd-dbus1-generator
 %endif
 %{_prefix}/lib/systemd/system-generators/systemd-system-update-generator
-%{_prefix}/lib/tmpfiles.d/systemd.conf
-%{_prefix}/lib/tmpfiles.d/x11.conf
-%{_prefix}/lib/tmpfiles.d/tmp.conf
+%{_prefix}/lib/tmpfiles.d/etc.conf
+%{_prefix}/lib/tmpfiles.d/home.conf
+%{_prefix}/lib/tmpfiles.d/journal-nocow.conf
 %{_prefix}/lib/tmpfiles.d/legacy.conf
 %{_prefix}/lib/tmpfiles.d/pamconsole-tmp.conf
+%{_prefix}/lib/tmpfiles.d/systemd.conf
 %{_prefix}/lib/tmpfiles.d/systemd-nologin.conf
-%{_prefix}/lib/tmpfiles.d/etc.conf
+%{_prefix}/lib/tmpfiles.d/systemd-nspawn.conf
+%{_prefix}/lib/tmpfiles.d/tmp.conf
 %{_prefix}/lib/tmpfiles.d/var.conf
+%{_prefix}/lib/tmpfiles.d/x11.conf
 %{_sbindir}/init
 %{_sbindir}/reboot
 %{_sbindir}/halt
@@ -557,13 +552,6 @@ fi
 %dir %{_datadir}/upgrade/scripts
 %{_datadir}/upgrade/scripts/systemd_upgrade.sh
 
-# Make sure we don't remove runlevel targets from F14 alpha installs,
-# but make sure we don't create then anew.
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel2.target
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel3.target
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel4.target
-%ghost %config(noreplace) %{_sysconfdir}/systemd/system/runlevel5.target
-
 %files -n libsystemd
 %manifest %{name}.manifest
 %if %{?with_multiuser}
@@ -571,10 +559,6 @@ fi
 %endif
 %{_libdir}/libsystemd.so.*
 %{_libdir}/libudev.so.*
-%{_libdir}/libsystemd-daemon.so.*
-%{_libdir}/libsystemd-id128.so.*
-%{_libdir}/libsystemd-journal.so.*
-%{_libdir}/libsystemd-login.so.*
 %{_libdir}/libnss_myhostname.so.2
 %if %{?WITH_MACHINED}
 %{_libdir}/libnss_mymachines.so.2
@@ -584,20 +568,12 @@ fi
 %manifest %{name}.manifest
 %{_libdir}/libudev.so
 %{_libdir}/libsystemd.so
-%{_libdir}/libsystemd-daemon.so
-%{_libdir}/libsystemd-id128.so
-%{_libdir}/libsystemd-journal.so
-%{_libdir}/libsystemd-login.so
 %dir %{_includedir}/systemd
 %if %{with kdbus}
 %{_includedir}/systemd/sd-bus.h
 %{_includedir}/systemd/sd-bus-protocol.h
 %{_includedir}/systemd/sd-bus-vtable.h
 %{_includedir}/systemd/sd-event.h
-%{_includedir}/systemd/sd-path.h
-%{_includedir}/systemd/sd-resolve.h
-%{_includedir}/systemd/sd-rtnl.h
-%{_includedir}/systemd/sd-utf8.h
 %endif
 %{_includedir}/systemd/_sd-common.h
 %{_includedir}/systemd/sd-daemon.h
@@ -608,29 +584,13 @@ fi
 %{_includedir}/libudev.h
 %{_libdir}/pkgconfig/libudev.pc
 %{_libdir}/pkgconfig/libsystemd.pc
-%{_libdir}/pkgconfig/libsystemd-daemon.pc
-%{_libdir}/pkgconfig/libsystemd-id128.pc
-%{_libdir}/pkgconfig/libsystemd-journal.pc
-%{_libdir}/pkgconfig/libsystemd-login.pc
-%{_libdir}/pkgconfig/systemd.pc
+%{_datadir}/pkgconfig/systemd.pc
 %{_datadir}/pkgconfig/udev.pc
 %{_sysconfdir}/rpm/macros.systemd
 
 %files analyze
 %manifest %{name}.manifest
 %{_bindir}/systemd-analyze
-
-%files -n libgudev
-%manifest %{name}.manifest
-%{_libdir}/libgudev-1.0.so.*
-
-%files -n libgudev-devel
-%manifest %{name}.manifest
-%{_libdir}/libgudev-1.0.so
-%dir %{_includedir}/gudev-1.0
-%dir %{_includedir}/gudev-1.0/gudev
-%{_includedir}/gudev-1.0/gudev/*.h
-%{_libdir}/pkgconfig/gudev-1.0*
 
 %files tests
 %manifest %{name}.manifest
