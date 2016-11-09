@@ -1270,33 +1270,6 @@ static int usbffs_address_create(const char *path) {
         return r;
 }
 
-static int ffs_address_create(
-                const char *path,
-                int *_fd) {
-
-        _cleanup_close_ int fd = -1;
-        struct stat st;
-
-        assert(path);
-        assert(_fd);
-
-        fd = open(path, O_RDWR|O_CLOEXEC|O_NOCTTY|O_NONBLOCK|O_NOFOLLOW);
-        if (fd < 0)
-                return -errno;
-
-        if (fstat(fd, &st) < 0)
-                return -errno;
-
-        /* Check whether this is a regular file (ffs endpoint)*/
-        if (!S_ISREG(st.st_mode))
-                return -EEXIST;
-
-        *_fd = fd;
-        fd = -1;
-
-        return 0;
-}
-
 static int mq_address_create(
                 const char *path,
                 mode_t mq_mode,

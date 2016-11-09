@@ -280,11 +280,11 @@ static int write_netlabel_rules(const char* srcdir) {
                 return -errno; /* negative error */
         }
 
-        /* write rules to load2 or change-rule from every file in the directory */
+        /* write rules to dst from every file in the directory */
         dir = opendir(srcdir);
         if (!dir) {
                 if (errno != ENOENT)
-                        log_warning_errno(errno, "Failed to opendir '%s': %m", srcdir);
+                        log_warning_errno(errno, "Failed to opendir %s: %m", srcdir);
                 return errno; /* positive on purpose */
         }
 
@@ -295,14 +295,11 @@ static int write_netlabel_rules(const char* srcdir) {
                 int fd;
                 _cleanup_fclose_ FILE *policy = NULL;
 
-                if (!dirent_is_file(entry))
-                        continue;
-
                 fd = openat(dfd, entry->d_name, O_RDONLY|O_CLOEXEC);
                 if (fd < 0) {
                         if (r == 0)
                                 r = -errno;
-                        log_warning_errno(errno, "Failed to open '%s': %m", entry->d_name);
+                        log_warning_errno(errno, "Failed to open %s: %m", entry->d_name);
                         continue;
                 }
 
@@ -311,98 +308,21 @@ static int write_netlabel_rules(const char* srcdir) {
                         if (r == 0)
                                 r = -errno;
                         safe_close(fd);
-                        log_error_errno(errno, "Failed to open '%s': %m", entry->d_name);
+                        log_error_errno(errno, "Failed to open %s: %m", entry->d_name);
                         continue;
                 }
 
                 /* load2 write rules in the kernel require a line buffered stream */
                 FOREACH_LINE(buf, policy,
-                             log_error(errno, "Failed to read line from '%s': %m",
+                             log_error_errno(errno, "Failed to read line from %s: %m",
                                        entry->d_name)) {
-
-                        _cleanup_free_ char *sbj = NULL, *obj = NULL, *acc1 = NULL, *acc2 = NULL;
-
-                        if (isempty(truncate_nl(buf)))
-                                continue;
-
-                        /* if 3 args -> load rule   : subject object access1 */
-                        /* if 4 args -> change rule : subject object access1 access2 */
-                        if (sscanf(buf, "%ms %ms %ms %ms", &sbj, &obj, &acc1, &acc2) < 3) {
-                                log_error_errno(errno, "Failed to parse rule '%s' in '%s', ignoring.", buf, entry->d_name);
-                                continue;
-                        }
-
-                        if (write(isempty(acc2) ? load2_fd : change_fd, buf, strlen(buf)) < 0) {
+                        if (!fputs(buf, dst)) {
                                 if (r == 0)
                                         r = -EINVAL;
                                 log_error_errno(errno, "Failed to write line to /sys/fs/smackfs/netlabel");
                                 break;
                         }
-                }
-        }
-
-        return r;
-}
-
-static int write_cipso2_rules(const char* srcdir) {
-        _cleanup_close_ int cipso2_fd = -1;
-        _cleanup_closedir_ DIR *dir = NULL;
-        struct dirent *entry;
-        char buf[NAME_MAX];
-        int dfd = -1;
-        int r = 0;
-
-        cipso2_fd = open("/sys/fs/smackfs/cipso2", O_RDWR|O_CLOEXEC|O_NONBLOCK|O_NOCTTY);
-        if (cipso2_fd < 0)  {
-                if (errno != ENOENT)
-                        log_warning_errno(errno, "Failed to open '/sys/fs/smackfs/cipso2': %m");
-                return -errno; /* negative error */
-        }
-
-        /* write rules to cipso2 from every file in the directory */
-        dir = opendir(srcdir);
-        if (!dir) {
-                if (errno != ENOENT)
-                        log_warning_errno(errno, "Failed to opendir '%s': %m", srcdir);
-                return errno; /* positive on purpose */
-        }
-
-        dfd = dirfd(dir);
-        assert(dfd >= 0);
-
-        FOREACH_DIRENT(entry, dir, return 0) {
-                int fd;
-                _cleanup_fclose_ FILE *policy = NULL;
-
-                if (!dirent_is_file(entry))
-                        continue;
-
-                fd = openat(dfd, entry->d_name, O_RDONLY|O_CLOEXEC);
-                if (fd < 0) {
-                        if (r == 0)
-                                r = -errno;
-                        log_error_errno(errno, "Failed to open '%s': %m", entry->d_name);
-                        continue;
-                }
-
-                policy = fdopen(fd, "re");
-                if (!policy) {
-                        if (r == 0)
-                                r = -errno;
-                        safe_close(fd);
-                        log_error_errno(errno, "Failed to open '%s': %m", entry->d_name);
-                        continue;
-                }
-
-                /* cipso2 write rules in the kernel require a line buffered stream */
-                FOREACH_LINE(buf, policy,
-                             log_error_errno(errno, "Failed to read line from '%s': %m",
-                                             entry->d_name)) {
-
-                        if (isempty(truncate_nl(buf)))
-                                continue;
-
-                        if (write(cipso2_fd, buf, strlen(buf)) < 0) {
+                        if (fflush(dst)) {
                                 if (r == 0)
                                         r = -errno;
                                 log_error_errno(errno, "Failed to flush writes to /sys/fs/smackfs/netlabel: %m");

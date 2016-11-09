@@ -336,7 +336,7 @@ int mount_cgroup_controllers(char ***join_controllers) {
                                 } else if (errno != EEXIST)
                                         return log_error_errno(errno, "Failed to create symlink %s: %m", t);
 
-                                r = mac_smack_apply(t, "*");
+                                r = mac_smack_apply(t, SMACK_ATTR_ACCESS, "*");
                                 if (r < 0)
                                         log_error_errno(r, "Failed to set SMACK label '%s': %m", t);
 
