@@ -518,18 +518,6 @@ int timestamp_deserialize(const char *value, usec_t *timestamp) {
         return r;
 }
 
-int timestamp_deserialize(const char *value, usec_t *timestamp) {
-        int r;
-
-        assert(value);
-
-        r = safe_atou64(value, timestamp);
-        if (r < 0)
-                return log_debug_errno(r, "Failed to parse timestamp value \"%s\": %m", value);
-
-        return r;
-}
-
 int parse_timestamp(const char *t, usec_t *usec) {
         static const struct {
                 const char *name;

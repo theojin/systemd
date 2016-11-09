@@ -1176,7 +1176,6 @@ static int service_spawn(
         assert(c);
         assert(_pid);
 
-
         /* TODO workaround code */
         if (UNIT(s)->cgroup_realized) {
                 _cleanup_free_ char *path = NULL;
@@ -1189,7 +1188,11 @@ static int service_spawn(
                 }
         }
 
-        unit_realize_cgroup(UNIT(s));
+        (void) unit_realize_cgroup(UNIT(s));
+        if (s->reset_cpu_usage) {
+                (void) unit_reset_cpu_usage(UNIT(s));
+                s->reset_cpu_usage = false;
+        }
 
         r = unit_setup_exec_runtime(UNIT(s));
         if (r < 0)
@@ -2162,9 +2165,6 @@ static int service_serialize(Unit *u, FILE *f, FDSet *fds) {
         if (s->watchdog_override_enable)
                unit_serialize_item_format(u, f, "watchdog-override-usec", USEC_FMT, s->watchdog_override_usec);
 
-        if (s->watchdog_override_enable)
-               unit_serialize_item_format(u, f, "watchdog-override-usec", USEC_FMT, s->watchdog_override_usec);
-
         return 0;
 }
 
@@ -3095,15 +3095,6 @@ static void service_notify_message(Unit *u, pid_t pid, char **tags, FDSet *fds) 
                 usec_t watchdog_override_usec;
                 if (safe_atou64(e, &watchdog_override_usec) < 0)
                         log_unit_warning(u, "Failed to parse WATCHDOG_USEC=%s", e);
-                else
-                        service_reset_watchdog_timeout(s, watchdog_override_usec);
-        }
-
-        e = strv_find_startswith(tags, "WATCHDOG_USEC=");
-        if (e) {
-                usec_t watchdog_override_usec;
-                if (safe_atou64(e, &watchdog_override_usec) < 0)
-                        log_unit_warning(u->id, "Failed to parse WATCHDOG_USEC=%s", e);
                 else
                         service_reset_watchdog_timeout(s, watchdog_override_usec);
         }
