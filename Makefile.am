@@ -2969,9 +2969,7 @@ systemd_dbus1_generator_SOURCES = \
 	src/dbus1-generator/dbus1-generator.c
 
 systemd_dbus1_generator_LDADD = \
-	libsystemd-label.la \
-	libsystemd-internal.la \
-	libsystemd-shared.la
+	libshared.la
 
 dbus1-generator-install-hook:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(usergeneratordir)
@@ -2983,6 +2981,9 @@ dbus1-generator-uninstall-hook:
 
 dist_xinitrc_SCRIPTS = \
 	xorg/50-systemd-user.sh
+
+INSTALL_EXEC_HOOKS += dbus1-generator-install-hook
+UNINSTALL_EXEC_HOOKS += dbus1-generator-uninstall-hook
 
 # ------------------------------------------------------------------------------
 systemd_sysv_generator_SOURCES = \
