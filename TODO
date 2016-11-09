@@ -95,6 +95,8 @@ Features:
 
 * cache sd_event_now() result from before the first iteration...
 
+* remove Capabilities=, after all AmbientCapabilities= and CapabilityBoundingSet= should be enough.
+
 * add systemctl stop --job-mode=triggering that follows TRIGGERED_BY deps and adds them to the same transaction
 
 * Maybe add a way how users can "pin" units into memory, so that they are not subject to automatic GC?
