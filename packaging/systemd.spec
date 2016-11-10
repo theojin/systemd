@@ -309,6 +309,11 @@ rm -f  %{buildroot}/usr/lib/systemd/user-generators/systemd-dbus1-generator
 rm -f  %{buildroot}/usr/lib/systemd/user/busnames.target
 %endif
 
+ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-daemon.pc
+ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-id128.pc
+ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-journal.pc
+ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
+
 # end of install
 %pre
 /usr/bin/getent group cdrom >/dev/null 2>&1 || /usr/sbin/groupadd -r -g 11 cdrom >/dev/null 2>&1 || :
@@ -586,6 +591,10 @@ fi
 %{_libdir}/pkgconfig/libsystemd.pc
 %{_datadir}/pkgconfig/systemd.pc
 %{_datadir}/pkgconfig/udev.pc
+%{_libdir}/pkgconfig/libsystemd-daemon.pc
+%{_libdir}/pkgconfig/libsystemd-id128.pc
+%{_libdir}/pkgconfig/libsystemd-journal.pc
+%{_libdir}/pkgconfig/libsystemd-login.pc
 %{_sysconfdir}/rpm/macros.systemd
 
 %files analyze
