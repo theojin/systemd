@@ -2580,6 +2580,35 @@ static int send_finished(sd_bus *bus, void *userdata) {
         return sd_bus_send(bus, message, NULL);
 }
 
+static int send_user_finished_to_system(sd_bus *bus, uid_t user_id) {
+        _cleanup_(sd_bus_message_unrefp) sd_bus_message *message = NULL;
+        int r;
+
+        assert(bus);
+
+        r = sd_bus_message_new_signal(bus, &message, "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "UserSessionStartupFinished");
+        if (r < 0)
+                return r;
+
+        r = sd_bus_message_append(message, "t", user_id);
+        if (r < 0)
+                return r;
+
+        return sd_bus_send(bus, message, NULL);
+}
+
+void bus_manager_send_user_finished_to_system(Manager *m, uid_t user_id)
+{
+        int r;
+
+        r = send_user_finished_to_system(m->system_bus, user_id);
+
+        if (r < 0)
+                log_debug_errno(r, "Failed to send user-session finished signal: %m");
+
+        return;
+}
+
 void bus_manager_send_finished(
                 Manager *m,
                 usec_t firmware_usec,
