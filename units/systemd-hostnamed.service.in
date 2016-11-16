@@ -19,7 +19,6 @@ PrivateTmp=yes
 PrivateDevices=yes
 PrivateNetwork=yes
 ProtectSystem=yes
-ProtectHome=yes
 ProtectControlGroups=yes
 ProtectKernelTunables=yes
 MemoryDenyWriteExecute=yes
