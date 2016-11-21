@@ -39,7 +39,6 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#define TC_NAME "systemd-tests"
 #define MAX_TC_NUM 1024
 #define MAX_BUFFER (64*1024)
 #define MAX_COMMENT 1024
@@ -213,19 +212,19 @@ void parse_one_test_one_binary(const struct binary* b, const char* test_name, ch
         case RESULT_CODE:
                 get_test_id(test_id, b, test_name);
                 if (state_option == 0)
-                        add_test_result(test_id, "OK", "", 1);
+                        add_test_result(test_id, "PASS", "", 1);
                 else if (state_option == 77)
                         add_test_result(test_id, "SKIP", "Please check stderr for details", 0);
                 else
-                        add_test_result(test_id, "ERROR", "", 0);
+                        add_test_result(test_id, "FAIL", "", 0);
                 break;
         case RESULT_SIGNAL:
                 get_test_id(test_id, b, test_name);
-                add_test_result(test_id, "ERROR", "Finished by SIGNAL", 0);
+                add_test_result(test_id, "FAIL", "Finished by SIGNAL", 0);
                 break;
         case RESULT_TIMEOUT:
                 get_test_id(test_id, b, test_name);
-                add_test_result(test_id, "ERROR", "Test TIMEOUT", 0);
+                add_test_result(test_id, "FAIL", "Test TIMEOUT", 0);
                 break;
         }
 }
@@ -475,7 +474,7 @@ static void run_test(const struct binary* b, const char* test_name)
 
         if (b->init)
                 if (!b->init()) {
-                        add_test_result(get_test_id(test_id, b, test_name), "0", "Cannot init test", 0);
+                        add_test_result(get_test_id(test_id, b, test_name), "ERROR", "Cannot init test", 0);
                         return;
                 }
 
@@ -483,7 +482,7 @@ static void run_test(const struct binary* b, const char* test_name)
         if (res > 0)
                 parse_output_with_timeout(b, res, test_name);
         else
-                add_test_result(get_test_id(test_id, b, test_name), "0", "Cannot start test", 0);
+                add_test_result(get_test_id(test_id, b, test_name), "ERROR", "Cannot start test", 0);
 
         if (b->clean)
                 b->clean();
@@ -539,12 +538,12 @@ static void prepare_results(void)
 {
 }
 
-static void print_results(const char* tcs_name)
+static void print_results()
 {
         int i = 0;
         for (i = 0; i < test_results_i; i++)
         {
-                printf("%s;%s;%s;%s\n", tcs_name, test_results[i].name, test_results[i].result, test_results[i].comment);
+                printf("%s;%s;%s\n", test_results[i].name, test_results[i].result, test_results[i].comment);
         }
 }
 
@@ -568,6 +567,6 @@ int main(int argc, char* argv[])
                 }
         }
 
-        print_results(TC_NAME);
+        print_results();
         return 0;
 }
