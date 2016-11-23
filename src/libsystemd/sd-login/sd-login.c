@@ -1152,7 +1152,7 @@ _public_ int sd_get_active_uids(uid_t **users) {
                 if (k < 0)
                         continue;
 
-                if(uid < uid_min && uid > uid_max)
+                if(uid < uid_min || uid > uid_max)
                         continue;
 
                 if (users) {
