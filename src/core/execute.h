@@ -157,7 +157,10 @@ struct ExecContext {
         unsigned long mount_flags;
 
         uint64_t capability_bounding_set;
+
         uint64_t capability_ambient_set;
+
+        cap_t capabilities;
         int secure_bits;
 
         int syslog_priority;
