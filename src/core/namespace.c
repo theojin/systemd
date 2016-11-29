@@ -29,6 +29,7 @@
 #include "alloc-util.h"
 #include "dev-setup.h"
 #include "fd-util.h"
+#include "fs-util.h"
 #include "loopback-setup.h"
 #include "missing.h"
 #include "mkdir.h"
@@ -422,15 +423,20 @@ int setup_namespace(
                 }
 
                 if (protect_home != PROTECT_HOME_NO) {
-                        const char *home_dir, *run_user_dir, *root_dir;
+                        _cleanup_free_ *home_dir_abs = NULL, *root_dir_abs = NULL;
+                        const char *home_dir, *root_dir, *run_user_dir;
+                        int r;
 
-                        home_dir = prefix_roota(root_directory, "/home");
-                        home_dir = strjoina("-", home_dir);
+                        r = readlink_and_make_absolute_root(root_directory, "/home", &home_dir_abs);
+                        if (!r)
+                                return r;
+                        home_dir = strjoina("-", home_dir_abs);
                         run_user_dir = prefix_roota(root_directory, "/run/user");
                         run_user_dir = strjoina("-", run_user_dir);
-                        root_dir = prefix_roota(root_directory, "/root");
-                        root_dir = strjoina("-", root_dir);
-
+                        r = readlink_and_make_absolute_root(root_directory, "/root", &root_dir_abs);
+                        if (!r)
+                                return r;
+                        root_dir = strjoina("-", root_dir_abs);
                         r = append_mounts(&m, STRV_MAKE(home_dir, run_user_dir, root_dir),
                                 protect_home == PROTECT_HOME_READ_ONLY ? READONLY : INACCESSIBLE);
                         if (r < 0)
