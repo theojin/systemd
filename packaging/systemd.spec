@@ -31,6 +31,7 @@ Source2:        %{name}-rpmlintrc
 Source1001:     systemd.manifest
 Source3:        systemd_upgrade.sh
 Source4:        test-runner.c
+Source5:        user-session-startup.service
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
 BuildRequires:  libacl-devel
@@ -220,6 +221,7 @@ EOF
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system/default.target.wants
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system/dbus.target.wants
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system/syslog.target.wants
+/usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/user/default.target.wants
 
 # Make sure the user generators dir exists too
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system-generators
@@ -252,6 +254,10 @@ install -Dm644 tmpfiles.d/legacy.conf %{buildroot}%{_prefix}/lib/tmpfiles.d/lega
 install -m644 %{SOURCE1} %{buildroot}%{_prefix}/lib/tmpfiles.d/
 
 install -m 755 -d %{buildroot}/%{_prefix}/lib/systemd/system
+
+# Install and enable tizen's user-session startup notification service
+install -m644 %{SOURCE5} %{buildroot}%{_prefix}/lib/systemd/user/
+ln -s ../user-session-startup.service %{buildroot}%{_prefix}/lib/systemd/user/default.target.wants/user-session-startup.service
 
 rm -rf %{buildroot}/%{_docdir}/%{name}
 
@@ -477,6 +483,8 @@ fi
 %{_prefix}/lib/systemd/user/paths.target
 %{_prefix}/lib/systemd/user/smartcard.target
 %{_prefix}/lib/systemd/user/timers.target
+%{_prefix}/lib/systemd/user/user-session-startup.service
+%{_prefix}/lib/systemd/user/default.target.wants/user-session-startup.service
 %if %{with kdbus}
 %{_prefix}/lib/systemd/user/busnames.target
 %{_prefix}/lib/systemd/user/systemd-bus-proxyd.socket

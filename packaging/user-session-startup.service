@@ -1,0 +1,9 @@
+[Unit]
+Description=Announce user-session-finish on D-Bus system bus
+
+[Service]
+ExecStart=-/usr/bin/dbus-send --system --type=signal /org/freedesktop/systemd1 org.freedesktop.systemd1.Manager.UserSessionStartupFinished uint64:%U
+Type=idle
+
+[Install]
+WantedBy=default.target
