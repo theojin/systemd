@@ -1526,17 +1526,15 @@ bool is_kdbus_wanted(void) {
 }
 
 bool is_kdbus_available(void) {
-        _cleanup_close_ int fd = -1;
-        struct kdbus_cmd cmd = { .size = sizeof(cmd), .flags = KDBUS_FLAG_NEGOTIATE };
+        static int kdbus_available = -1;
 
         if (!is_kdbus_wanted())
                 return false;
 
-        fd = open("/sys/fs/kdbus/control", O_RDWR | O_CLOEXEC | O_NONBLOCK | O_NOCTTY);
-        if (fd < 0)
-                return false;
+        if (kdbus_available < -1)
+                kdbus_available = access("/sys/fs/kdbus", F_OK) >= 0;
 
-        return ioctl(fd, KDBUS_CMD_BUS_MAKE, &cmd) >= 0;
+        return kdbus_available;
 }
 
 int bus_property_get_rlimit(
