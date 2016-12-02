@@ -26,7 +26,7 @@ Source0:        http://www.freedesktop.org/software/systemd/%{name}-%{version}.t
 Source1:        pamconsole-tmp.conf
 Source2:        %{name}-rpmlintrc
 Source1001:     systemd.manifest
-Source3:        systemd_upgrade.sh
+Source3:        500.systemd_upgrade.sh
 Source4:        test-runner.c
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
@@ -555,7 +555,7 @@ fi
 %{_localstatedir}/log/journal
 
 %dir %{_datadir}/upgrade/scripts
-%{_datadir}/upgrade/scripts/systemd_upgrade.sh
+%{_datadir}/upgrade/scripts/500.systemd_upgrade.sh
 
 # Make sure we don't remove runlevel targets from F14 alpha installs,
 # but make sure we don't create then anew.
