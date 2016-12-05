@@ -127,6 +127,8 @@ glib-based applications using libudev functionality.
 cp %{SOURCE1001} .
 
 %build
+export CFLAGS=$( echo $CFLAGS | sed -e "s/-flto//g" )
+export CXXFLAGS=$( echo $CXXFLAGS | sed -e "s/-flto//g")
 %autogen
 %configure \
         %{enable kdbus} \
