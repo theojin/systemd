@@ -554,7 +554,6 @@ fi
 
 %{_localstatedir}/log/journal
 
-%dir %{_datadir}/upgrade/scripts
 %{_datadir}/upgrade/scripts/500.systemd_upgrade.sh
 
 # Make sure we don't remove runlevel targets from F14 alpha installs,
