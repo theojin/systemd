@@ -335,6 +335,8 @@ ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
 %endif
 /usr/bin/systemctl daemon-reexec > /dev/null 2>&1 || :
 /usr/bin/systemctl start systemd-udevd.service >/dev/null 2>&1 || :
+/usr/bin/mkdir -p /etc/systemd/network
+/usr/bin/ln -sf /dev/null /etc/systemd/network/99-default.link
 
 %postun
 if [ $1 -ge 1 ] ; then
