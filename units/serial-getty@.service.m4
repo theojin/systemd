@@ -9,6 +9,7 @@
 Description=Serial Getty on %I
 Documentation=man:agetty(8) man:systemd-getty-generator(8)
 Documentation=http://0pointer.de/blog/projects/serial-console.html
+DefaultDependencies=no
 BindsTo=dev-%i.device
 After=dev-%i.device plymouth-quit-wait.service
 m4_ifdef(`HAVE_SYSV_COMPAT',
