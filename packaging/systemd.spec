@@ -339,6 +339,13 @@ install -m 755 %{SOURCE3} %{buildroot}%{_datadir}/upgrade/scripts
 /usr/bin/systemctl daemon-reexec > /dev/null 2>&1 || :
 /usr/bin/systemctl start systemd-udevd.service >/dev/null 2>&1 || :
 
+#link system, user unit directory in conf dir to opt conf dir
+/usr/bin/mkdir -p /opt/etc/systemd
+/usr/bin/mv /etc/systemd/system /opt/etc/systemd/system 
+/usr/bin/mv /etc/systemd/user /opt/etc/systemd/user
+/usr/bin/ln -s ../../opt/etc/systemd/system /etc/systemd/system
+/usr/bin/ln -s ../../opt/etc/systemd/user /etc/systemd/user
+
 %postun
 if [ $1 -ge 1 ] ; then
         /usr/bin/systemctl daemon-reload > /dev/null 2>&1 || :
@@ -388,8 +395,8 @@ fi
 %{_bindir}/timedatectl
 %endif
 %dir %{_sysconfdir}/systemd
-%dir %{_sysconfdir}/systemd/system
-%dir %{_sysconfdir}/systemd/user
+%{_sysconfdir}/systemd/system
+%{_sysconfdir}/systemd/user
 %dir %{_sysconfdir}/tmpfiles.d
 %dir %{_sysconfdir}/sysctl.d
 %dir %{_sysconfdir}/modules-load.d
