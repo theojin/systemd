@@ -2213,8 +2213,7 @@ nodist_systemunit_DATA += \
 	units/systemd-tmpfiles-setup.service \
 	units/systemd-tmpfiles-clean.service
 
-nodist_tmpfiles_DATA = \
-	tmpfiles.d/etc.conf
+nodist_tmpfiles_DATA = 
 
 dist_tmpfiles_DATA = \
 	tmpfiles.d/systemd.conf \

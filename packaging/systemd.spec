@@ -527,7 +527,6 @@ fi
 %{_prefix}/lib/tmpfiles.d/legacy.conf
 %{_prefix}/lib/tmpfiles.d/pamconsole-tmp.conf
 %{_prefix}/lib/tmpfiles.d/systemd-nologin.conf
-%{_prefix}/lib/tmpfiles.d/etc.conf
 %{_prefix}/lib/tmpfiles.d/var.conf
 %{_sbindir}/init
 %{_sbindir}/reboot
