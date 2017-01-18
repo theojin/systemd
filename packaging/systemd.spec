@@ -520,7 +520,6 @@ fi
 %{_prefix}/lib/systemd/user-generators/systemd-dbus1-generator
 %endif
 %{_prefix}/lib/systemd/system-generators/systemd-system-update-generator
-%{_prefix}/lib/tmpfiles.d/etc.conf
 %{_prefix}/lib/tmpfiles.d/home.conf
 %{_prefix}/lib/tmpfiles.d/journal-nocow.conf
 %{_prefix}/lib/tmpfiles.d/legacy.conf
