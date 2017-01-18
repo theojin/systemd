@@ -2518,8 +2518,7 @@ nodist_systemunit_DATA += \
 	units/systemd-tmpfiles-clean.service
 
 nodist_tmpfiles_DATA = \
-	tmpfiles.d/systemd.conf \
-	tmpfiles.d/etc.conf
+	tmpfiles.d/systemd.conf
 
 dist_tmpfiles_DATA = \
 	tmpfiles.d/systemd-nologin.conf \
