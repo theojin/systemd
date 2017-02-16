@@ -259,14 +259,6 @@ rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/systemd-m
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/systemd-ask-password-console.path
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/multi-user.target.wants/systemd-ask-password-wall.path
 
-# Disable systemd-bus-proxyd
-%if %{with kdbus}
-rm -Rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-bus-proxyd.socket
-rm -Rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-bus-proxyd.service
-rm -Rf %{buildroot}/%{_prefix}/lib/systemd/user/systemd-bus-proxyd.socket
-rm -Rf %{buildroot}/%{_prefix}/lib/systemd/user/systemd-bus-proxyd.service
-%endif
-
 # Move macros to the proper location for Tizen
 mkdir -p %{buildroot}%{_sysconfdir}/rpm
 install -m644 src/core/macros.systemd %{buildroot}%{_sysconfdir}/rpm/macros.systemd
