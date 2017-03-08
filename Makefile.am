@@ -313,7 +313,7 @@ install-directories-hook:
 	$(MKDIR_P) $(addprefix $(DESTDIR),$(INSTALL_DIRS))
 
 install-environment-conf-hook: install-directories-hook
-	$(AM_V_LN)cd $(DESTDIR) &&
+	$(AM_V_LN)cd $(DESTDIR) && \
 	$(LN_S) -f ./$(sysconfdir)/environment \
 		./$(environmentdir)/99-environment.conf
 
