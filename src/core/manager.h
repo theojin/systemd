@@ -295,6 +295,9 @@ struct Manager {
          * value where Unit objects are contained. */
         Hashmap *units_requiring_mounts_for;
 
+        /* Reference to the kdbus bus control fd */
+        int kdbus_fd;
+
         /* Used for processing polkit authorization responses */
         Hashmap *polkit_registry;
 
