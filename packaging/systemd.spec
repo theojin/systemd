@@ -413,17 +413,17 @@ fi
 %dir %{_prefix}/lib/firmware
 %dir %{_prefix}/lib/firmware/updates
 %dir %{_datadir}/systemd
-%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.systemd1.conf
-%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.hostname1.conf
+%config(noreplace) %{_datadir}/dbus-1/system.d/org.freedesktop.systemd1.conf
+%config(noreplace) %{_datadir}/dbus-1/system.d/org.freedesktop.hostname1.conf
 %if %{?with_multiuser}
-%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.login1.conf
+%config(noreplace) %{_datadir}/dbus-1/system.d/org.freedesktop.login1.conf
 %endif
-%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.locale1.conf
+%config(noreplace) %{_datadir}/dbus-1/system.d/org.freedesktop.locale1.conf
 %if %{?WITH_TIMEDATED}
-%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.timedate1.conf
+%config(noreplace) %{_datadir}/dbus-1/system.d/org.freedesktop.timedate1.conf
 %endif
 %if %{?WITH_MACHINED}
-%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.machine1.conf
+%config(noreplace) %{_datadir}/dbus-1/system.d/org.freedesktop.machine1.conf
 %endif
 %if %{?WITH_COREDUMP}
 %config(noreplace) %{_sysconfdir}/systemd/coredump.conf
