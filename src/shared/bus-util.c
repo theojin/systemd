@@ -1542,23 +1542,17 @@ int bus_path_decode_unique(const char *path, const char *prefix, char **ret_send
 }
 
 bool is_kdbus_wanted(void) {
-        _cleanup_free_ char *value = NULL;
+        bool value;
 #ifdef ENABLE_KDBUS
         const bool configured = true;
 #else
         const bool configured = false;
 #endif
 
-        int r;
+        if (proc_cmdline_get_bool("kdbus", &value) > 0)
+                return value;
 
-        if (get_proc_cmdline_key("kdbus", NULL) > 0)
-                return true;
-
-        r = get_proc_cmdline_key("kdbus=", &value);
-        if (r <= 0)
-                return configured;
-
-        return parse_boolean(value) == 1;
+        return configured;
 }
 
 bool is_kdbus_available(void) {
