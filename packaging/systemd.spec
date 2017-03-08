@@ -558,6 +558,15 @@ fi
 
 %{_datadir}/upgrade/scripts/500.systemd_upgrade.sh
 
+# TODO cleanup
+%{_bindir}/systemd-mount
+%{_bindir}/systemd-umount
+%{_libdir}/environment.d/99-environment.conf
+%{_libdir}/libnss_systemd.so.2
+%{_libdir}/systemd/user-environment-generators/30-systemd-environment-d-generator
+%{_libdir}/systemd/user/graphical-session-pre.target
+%{_libdir}/systemd/user/graphical-session.target
+
 %files -n libsystemd
 %manifest %{name}.manifest
 %if %{?with_multiuser}
