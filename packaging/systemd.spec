@@ -500,7 +500,7 @@ fi
 %{_prefix}/lib/systemd/network/99-default.link
 %exclude %{_prefix}/lib/systemd/system-preset/90-systemd.preset
 
-%{_prefix}/lib/systemd/libsystemd-shared-231.so
+%{_prefix}/lib/systemd/libsystemd-shared-233.so
 %{_prefix}/lib/systemd/libsystemd-shared.so
 %{_prefix}/lib/systemd/systemd-*
 %dir %{_prefix}/lib/systemd/catalog
