@@ -274,7 +274,6 @@ rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-hibernate-re
 install -D -m 755 %{_builddir}/%{name}-%{version}/systemd-tests %{buildroot}%{_prefix}/lib/dbus-tests/runner/systemd-tests
 mkdir -p %{buildroot}%{_prefix}/lib/dbus-tests/test-suites/systemd-tests/
 mv %{_builddir}/%{name}-%{version}/test-bus-* %{buildroot}%{_prefix}/lib/dbus-tests/test-suites/systemd-tests/
-rm %{buildroot}%{_prefix}/lib/dbus-tests/test-suites/systemd-tests/test-bus-policy
 
 # Shell Completion
 %if ! %{?WITH_BASH_COMPLETION}
