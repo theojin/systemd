@@ -121,6 +121,8 @@ cp %{SOURCE1001} .
 cp %{SOURCE4} .
 
 %build
+echo $PATH
+which gcc
 ./autogen.sh
 %configure \
         %{enable kdbus} \
