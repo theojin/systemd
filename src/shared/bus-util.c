@@ -1506,37 +1506,54 @@ int bus_path_decode_unique(const char *path, const char *prefix, char **ret_send
 }
 
 bool is_kdbus_wanted(void) {
-        _cleanup_free_ char *value = NULL;
 #ifdef ENABLE_KDBUS
-        const bool configured = true;
+        static int wanted = -1;
+
+        if (wanted < 0) {
+                _cleanup_free_ char *value = NULL;
+
+                if (get_proc_cmdline_key("kdbus", NULL) > 0) {
+                        wanted = true;
+                        goto finish;
+                }
+
+                if (get_proc_cmdline_key("kdbus=", &value) > 0) {
+                        wanted = parse_boolean(value) == 1;
+                        goto finish;
+                }
+
+                wanted = access("/etc/systemd/extension-kdbus", F_OK) == 0;
+        }
+
+finish:
+        return wanted ? true : false;
 #else
-        const bool configured = false;
+        return false;
 #endif
-
-        int r;
-
-        if (get_proc_cmdline_key("kdbus", NULL) > 0)
-                return true;
-
-        r = get_proc_cmdline_key("kdbus=", &value);
-        if (r <= 0)
-                return configured;
-
-        return parse_boolean(value) == 1;
 }
 
 bool is_kdbus_available(void) {
-        _cleanup_close_ int fd = -1;
-        struct kdbus_cmd cmd = { .size = sizeof(cmd), .flags = KDBUS_FLAG_NEGOTIATE };
+#ifdef ENABLE_KDBUS
+        static int available = -1;
 
         if (!is_kdbus_wanted())
                 return false;
 
-        fd = open("/sys/fs/kdbus/control", O_RDWR | O_CLOEXEC | O_NONBLOCK | O_NOCTTY);
-        if (fd < 0)
-                return false;
+        if (available < 0) {
+                _cleanup_close_ int fd = -1;
+                struct kdbus_cmd cmd = { .size = sizeof(cmd), .flags = KDBUS_FLAG_NEGOTIATE };
 
-        return ioctl(fd, KDBUS_CMD_BUS_MAKE, &cmd) >= 0;
+                fd = open("/sys/fs/kdbus/control", O_RDWR | O_CLOEXEC | O_NONBLOCK | O_NOCTTY);
+                if (fd < 0)
+                        available = false;
+                else
+                        available = ioctl(fd, KDBUS_CMD_BUS_MAKE, &cmd) >= 0;
+        }
+
+        return available ? true : false;
+#else
+        return false;
+#endif
 }
 
 int bus_property_get_rlimit(

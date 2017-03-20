@@ -1,7 +1,3 @@
-# Do not create provides from extension .so files because the main package
-# should anchor any reverse-dependencies
-%global __provides_exclude_from ^(.*\\.extension-kdbus)$
-
 # "enable foo" will turn into --enable-foo or --disable-foo
 # depending "with_foo" macro
 %define enable() %{expand:%%{?with_%{1}:--enable-%{1}}%%{!?with_%{1}:--disable-%{1}}}
@@ -27,9 +23,9 @@ Group:          Base/Startup
 Source0:        https://github.com/systemd/systemd/archive/v%{version}.tar.gz
 Source1:        pamconsole-tmp.conf
 Source2:        %{name}-rpmlintrc
-Source1001:     systemd.manifest
 Source3:        500.systemd_upgrade.sh
 Source4:        test-runner.c
+Source1001:     systemd.manifest
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
 BuildRequires:  libacl-devel
@@ -131,70 +127,8 @@ cp %{SOURCE4} .
 
 %build
 %autogen
-
-# Create kdbus extension first
 %configure \
         --enable-kdbus \
-%if ! %{WITH_RANDOMSEED}
-        --disable-randomseed \
-%endif
-%if ! %{?WITH_COREDUMP}
-	--disable-coredump \
-%endif
-%if ! %{?WITH_BACKLIGHT}
-	--disable-backlight \
-%endif
-%if ! %{?WITH_TIMEDATED}
-	--disable-timedated \
-%endif
-%if ! %{WITH_RFKILL}
-	--disable-rfkill \
-%endif
-        --enable-compat-libs \
-        --disable-hwdb \
-        --disable-sysusers \
-        --disable-firstboot \
-        --disable-polkit \
-        --disable-timesyncd \
-        --disable-resolved \
-        --disable-networkd \
-%if ! %{?WITH_MACHINED}
-        --disable-machined \
-%endif
-        --disable-importd \
-        --disable-gcrypt \
-        --libexecdir=%{_prefix}/lib \
-        --docdir=%{_docdir}/systemd \
-        --disable-static \
-        --with-sysvinit-path= \
-        --with-sysvrcnd-path= \
-        --with-smack-run-label=System::Privileged \
-%if ! %{?with_multiuser}
-        --disable-logind \
-%endif
-        cc_cv_CFLAGS__flto=no
-make %{?_smp_mflags} \
-        systemunitdir=%{_unitdir} \
-        userunitdir=%{_unitdir_user}
-
-%make_install
-mkdir -p extension-kdbus
-mv %{buildroot}%{_prefix}/lib/systemd/systemd extension-kdbus/
-mv %{buildroot}%{_prefix}/lib/systemd/systemd-remount-fs extension-kdbus/
-mv %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown extension-kdbus/
-mv %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator extension-kdbus/
-mv %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-fstab-generator extension-kdbus/
-mv %{buildroot}%{_prefix}/lib/systemd/libsystemd-*.so extension-kdbus/
-mv %{buildroot}%{_libdir}/security/pam_systemd.so extension-kdbus/
-
-%{__make} clean
-
-
-# Support for generating separate packages with libraries generating coverage files
-# WARNING: if coverage build is enabled, incremental builds will not work correctly.
-#          Use the option only to generate systemd-coverage packages.
-%configure \
-        --disable-kdbus \
 %if ! %{WITH_RANDOMSEED}
         --disable-randomseed \
 %endif
@@ -255,17 +189,6 @@ cat <<EOF >> systemd.lang
 %lang(zh) /usr/lib/systemd/catalog/systemd.zh_CN.catalog
 %lang(zh) /usr/lib/systemd/catalog/systemd.zh_TW.catalog
 EOF
-
-# kdbus extension
-pushd extension-kdbus
-mv systemd                 %{buildroot}%{_prefix}/lib/systemd/systemd.extension-kdbus
-mv systemd-remount-fs      %{buildroot}%{_prefix}/lib/systemd/systemd-remount-fs.extension-kdbus
-mv systemd-shutdown        %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown.extension-kdbus
-mv systemd-dbus1-generator %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator.extension-kdbus
-mv systemd-fstab-generator %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-fstab-generator.extension-kdbus
-for FILE in libsystemd-shared*; do mv "$FILE" "%{buildroot}%{_prefix}/lib/systemd/$FILE.extension-kdbus"; done
-mv pam_systemd.so          %{buildroot}%{_libdir}/security/pam_systemd.so.extension-kdbus
-popd
 
 # udev links
 /usr/bin/mkdir -p %{buildroot}/%{_sbindir}
@@ -347,11 +270,13 @@ install -m644 src/core/macros.systemd %{buildroot}%{_sysconfdir}/rpm/macros.syst
 rm -f %{buildroot}%{_prefix}/lib/rpm/macros.d/macros.systemd
 
 # Exclude ELF binaries
-rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-debug-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-efi-boot-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-gpt-auto-generator
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-hibernate-resume-generator
+
+# Marker file for kdbus
+touch %{buildroot}/%{_sysconfdir}/systemd/extension-kdbus
 
 # Preapre tests for 'dbus-integration-test' framework
 install -D -m 755 %{_builddir}/%{name}-%{version}/systemd-tests %{buildroot}%{_prefix}/lib/dbus-tests/runner/systemd-tests
@@ -618,10 +543,6 @@ fi
 
 %{_datadir}/upgrade/scripts/500.systemd_upgrade.sh
 
-# remove kdbus extension file on legacy package
-%exclude %{_prefix}/lib/systemd/systemd-remount-fs.extension-kdbus
-%exclude %{_prefix}/lib/systemd/systemd-shutdown.extension-kdbus
-
 %files -n libsystemd
 %manifest %{name}.manifest
 %if %{?with_multiuser}
@@ -634,27 +555,11 @@ fi
 %{_libdir}/libnss_mymachines.so.2
 %endif
 
-%post extension-kdbus
-pushd %{_prefix}/lib/systemd/
-mv systemd.extension-kdbus systemd
-mv systemd-remount-fs.extension-kdbus systemd-remount-fs
-mv systemd-shutdown.extension-kdbus systemd-shutdown
-mv system-generators/systemd-dbus1-generator.extension-kdbus system-generators/systemd-dbus1-generator
-mv system-generators/systemd-fstab-generator.extension-kdbus system-generators/systemd-fstab-generator
-for FILE in libsystemd-shared*.so.extension-kdbus; do mv "$FILE" "${FILE%.extension-kdbus}"; done
-popd
-mv %{_libdir}/security/pam_systemd.so.extension-kdbus %{_libdir}/security/pam_systemd.so
-
 %files extension-kdbus
 %manifest %{name}.manifest
-%{_prefix}/lib/systemd/systemd.extension-kdbus
-%{_prefix}/lib/systemd/systemd-remount-fs.extension-kdbus
-%{_prefix}/lib/systemd/systemd-shutdown.extension-kdbus
-%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator.extension-kdbus
-%{_prefix}/lib/systemd/system-generators/systemd-fstab-generator.extension-kdbus
-%{_prefix}/lib/systemd/libsystemd-shared*.so.extension-kdbus
-%{_libdir}/security/pam_systemd.so.extension-kdbus
+%{_sysconfdir}/systemd/extension-kdbus
 %{_prefix}/lib/systemd/user/busnames.target
+%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator
 %{_prefix}/lib/systemd/user-generators/systemd-dbus1-generator
 
 %files devel
