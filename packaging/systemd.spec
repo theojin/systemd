@@ -185,7 +185,7 @@ mv %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown extension-kdbus/
 mv %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator extension-kdbus/
 mv %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-fstab-generator extension-kdbus/
 mv %{buildroot}%{_prefix}/lib/systemd/libsystemd-*.so extension-kdbus/
-mv %{buildroot}%{_prefix}/lib/security/pam_systemd.so extension-kdbus/
+mv %{buildroot}%{_libdir}/security/pam_systemd.so extension-kdbus/
 
 %{__make} clean
 
@@ -264,7 +264,7 @@ mv systemd-shutdown        %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown.e
 mv systemd-dbus1-generator %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator.extension-kdbus
 mv systemd-fstab-generator %{buildroot}%{_prefix}/lib/systemd/system-generators/systemd-fstab-generator.extension-kdbus
 for FILE in libsystemd-shared*; do mv "$FILE" "%{buildroot}%{_prefix}/lib/systemd/$FILE.extension-kdbus"; done
-mv pam_systemd.so          %{buildroot}%{_prefix}/lib/security/pam_systemd.so.extension-kdbus
+mv pam_systemd.so          %{buildroot}%{_libdir}/security/pam_systemd.so.extension-kdbus
 popd
 
 # udev links
@@ -642,8 +642,8 @@ mv systemd-shutdown.extension-kdbus systemd-shutdown
 mv system-generators/systemd-dbus1-generator.extension-kdbus system-generators/systemd-dbus1-generator
 mv system-generators/systemd-fstab-generator.extension-kdbus system-generators/systemd-fstab-generator
 for FILE in libsystemd-shared*.so.extension-kdbus; do mv "$FILE" "${FILE%.extension-kdbus}"; done
-mv ../security/pam_systemd.so.extension-kdbus ../security/pam_systemd.so
 popd
+mv %{_libdir}/security/pam_systemd.so.extension-kdbus %{_libdir}/security/pam_systemd.so
 
 %files extension-kdbus
 %manifest %{name}.manifest
@@ -653,7 +653,7 @@ popd
 %{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator.extension-kdbus
 %{_prefix}/lib/systemd/system-generators/systemd-fstab-generator.extension-kdbus
 %{_prefix}/lib/systemd/libsystemd-shared*.so.extension-kdbus
-%{_prefix}/lib/security/pam_systemd.so.extension-kdbus
+%{_libdir}/security/pam_systemd.so.extension-kdbus
 %{_prefix}/lib/systemd/user/busnames.target
 %{_prefix}/lib/systemd/user-generators/systemd-dbus1-generator
 
