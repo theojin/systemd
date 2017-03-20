@@ -11,6 +11,7 @@
 %define WITH_RFKILL 0
 %define with_multiuser 1
 %define WITH_MACHINED 0
+%define WITH_DOC 0
 
 Name:           systemd
 Version:        231
@@ -33,8 +34,10 @@ BuildRequires:  libblkid-devel >= 2.20
 BuildRequires:  libcap-devel
 BuildRequires:  libgcrypt-devel
 BuildRequires:  libkmod-devel >= 14
+%if %{?WITH_DOC}
 BuildRequires:  xsltproc
 BuildRequires:  docbook-xsl-stylesheets
+%endif
 BuildRequires:  pam-devel
 BuildRequires:  pkgconfig
 # BuildRequires:  pkgconfig(dbus-1)     # for remove circular dependency on OBS
@@ -159,6 +162,9 @@ cp %{SOURCE4} .
         --disable-gcrypt \
         --libexecdir=%{_prefix}/lib \
         --docdir=%{_docdir}/systemd \
+%if ! %{?WITH_DOC}
+        --disable-manpages \
+%endif
         --disable-static \
         --with-sysvinit-path= \
         --with-sysvrcnd-path= \
@@ -597,4 +603,6 @@ fi
 %{_prefix}/lib/dbus-tests/test-suites/systemd-tests/
 %{_prefix}/lib/dbus-tests/runner/systemd-tests
 
+%if %{?WITH_DOC}
 %docs_package
+%endif
