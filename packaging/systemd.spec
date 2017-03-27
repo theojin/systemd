@@ -365,6 +365,7 @@ fi
 
 %files
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1  LICENSE.GPL2  LICENSE.MIT
 %if %{with_multiuser}
 %config %{_sysconfdir}/pam.d/systemd-user
 %endif
@@ -565,6 +566,7 @@ fi
 
 %files -n libsystemd
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1  LICENSE.MIT
 %if %{?with_multiuser}
 %{_libdir}/security/pam_systemd.so
 %endif
@@ -621,6 +623,7 @@ fi
 
 %files -n libgudev
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1
 %{_libdir}/libgudev-1.0.so.*
 
 %files -n libgudev-devel
