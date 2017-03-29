@@ -17,7 +17,7 @@ Name:           systemd
 Version:        231
 Release:        0%{?release_flags}
 # For a breakdown of the licensing, see README
-License:        LGPL-2.1+ and MIT and GPL-2.0+
+License:        LGPL-2.1+ and GPL-2.0+
 Summary:        A System and Service Manager
 Url:            http://www.freedesktop.org/wiki/Software/systemd
 Group:          Base/Startup
@@ -73,7 +73,7 @@ elaborate transactional dependency-based service control logic. It can
 work as a drop-in replacement for sysvinit.
 
 %package -n libsystemd
-License:        LGPL-2.1+ and MIT
+License:        LGPL-2.1+
 Summary:        Systemd libraries
 Group:          Base/Startup
 Obsoletes:      libudev < 183
@@ -85,7 +85,7 @@ Conflicts:      systemd < 185-4
 Libraries for systemd and udev, as well as the systemd PAM module.
 
 %package devel
-License:        LGPL-2.1+ and MIT
+License:        LGPL-2.1+
 Summary:        Development headers for systemd
 Requires:       %{name} = %{version}
 Requires:		libsystemd = %{version}
@@ -361,6 +361,7 @@ fi
 
 %files
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1  LICENSE.GPL2
 %if %{with_multiuser}
 %config %{_sysconfdir}/pam.d/systemd-user
 %endif
@@ -551,6 +552,7 @@ fi
 
 %files -n libsystemd
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1
 %if %{?with_multiuser}
 %{_libdir}/security/pam_systemd.so
 %endif
@@ -563,6 +565,7 @@ fi
 
 %files extension-kdbus
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1  LICENSE.GPL2
 %{_sysconfdir}/systemd/extension-kdbus
 %{_prefix}/lib/systemd/user/busnames.target
 %{_prefix}/lib/systemd/system-generators/systemd-dbus1-generator
