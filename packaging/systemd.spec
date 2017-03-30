@@ -599,6 +599,7 @@ fi
 
 %files analyze
 %manifest %{name}.manifest
+%license LICENSE.LGPL2.1
 %{_bindir}/systemd-analyze
 
 %files tests
