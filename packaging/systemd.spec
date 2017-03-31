@@ -167,6 +167,7 @@ cp %{SOURCE3} .
         --disable-manpages \
 %endif
         --disable-static \
+        --with-rpmmacrosdir=%{_sysconfdir}/rpm/ \
         --with-sysvinit-path= \
         --with-sysvrcnd-path= \
         --with-smack-run-label=System::Privileged \
@@ -268,11 +269,6 @@ rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/multi-user.target.wants/system
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-tmpfiles-clean.timer
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-tmpfiles-clean.service
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/timers.target.wants/systemd-tmpfiles-clean.timer
-
-# Move macros to the proper location for Tizen
-mkdir -p %{buildroot}%{_sysconfdir}/rpm
-install -m644 src/core/macros.systemd %{buildroot}%{_sysconfdir}/rpm/macros.systemd
-rm -f %{buildroot}%{_prefix}/lib/rpm/macros.d/macros.systemd
 
 # Exclude ELF binaries
 rm -f %{buildroot}/%{_prefix}/lib/systemd/system-generators/systemd-debug-generator
