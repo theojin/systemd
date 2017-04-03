@@ -120,3 +120,6 @@
 #define SPECIAL_USER_SLICE "user.slice"
 #define SPECIAL_MACHINE_SLICE "machine.slice"
 #define SPECIAL_ROOT_SLICE "-.slice"
+
+
+#define XCACHE_CGROUP_ROOT "/run/systemd/x-cache-cgroup-root"
