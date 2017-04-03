@@ -1060,20 +1060,28 @@ int cg_mangle_path(const char *path, char **result) {
 }
 
 int cg_get_root_path(char **path) {
+	static const char *saved_p = NULL;
         char *p, *e;
         int r;
 
         assert(path);
 
-        r = cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, 1, &p);
-        if (r == -EACCES) {
-                /* /proc/1/cgroup might not be accessible due
-                 * to security policy - assume sane default */
-                p = strdup("/");
-                if (!p)
-                        return -ENOMEM;
-        } else if (r < 0)
-                return r;
+	if( saved_p == NULL )
+	{
+		r = cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, 1, &p);
+		if (r == -EACCES) {
+			/* /proc/1/cgroup might not be accessible due
+			 * to security policy - assume sane default */
+			p = strdup("/");
+			if (!p)
+				return -ENOMEM;
+		} else if (r < 0)
+			return r;
+
+		saved_p = p;
+	}
+
+	p = strdup(saved_p);
 
         e = endswith(p, "/" SPECIAL_SYSTEM_SLICE);
         if (e)
