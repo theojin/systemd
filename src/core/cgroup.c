@@ -33,6 +33,8 @@
 #include "string-table.h"
 #include "string-util.h"
 #include "stdio-util.h"
+#include "umask-util.h"
+#include "smack-util.h"
 
 #define CGROUP_CPU_QUOTA_PERIOD_USEC ((usec_t) 100 * USEC_PER_MSEC)
 
@@ -1629,6 +1631,14 @@ int manager_setup_cgroup(Manager *m) {
          * versions where PID 1 was moved there. Also see
          * cg_get_root_path(). */
         if (!e && MANAGER_IS_SYSTEM(m)) {
+                /* Cache pid's 1 cgroup for unpriviledged clients.
+                   Needed as /proc/1/.. is inaccessible due to Smack privs */
+                RUN_WITH_UMASK(0022) {
+                        r = write_string_file(XCACHE_CGROUP_ROOT, m->cgroup_root, WRITE_STRING_FILE_CREATE);
+                }
+                if (r >= 0)
+                        mac_smack_apply(XCACHE_CGROUP_ROOT, SMACK_ATTR_ACCESS, "_");
+
                 e = endswith(m->cgroup_root, "/" SPECIAL_SYSTEM_SLICE);
                 if (!e)
                         e = endswith(m->cgroup_root, "/system"); /* even more legacy */

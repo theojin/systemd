@@ -117,3 +117,6 @@
 
 /* The scope unit systemd itself lives in. */
 #define SPECIAL_INIT_SCOPE "init.scope"
+
+
+#define XCACHE_CGROUP_ROOT "/run/systemd/x-cache-cgroup-root"
