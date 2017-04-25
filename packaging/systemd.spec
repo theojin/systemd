@@ -108,7 +108,7 @@ initialization at boot.
 at boot.
 
 %package tests
-License:        LGPL-2.1+ and Apache-2.0
+License:        LGPL-2.1+ and BSD-2-Clause
 Summary:        Set of tests for sd-bus component
 Requires:       %{name} = %{version}
 
