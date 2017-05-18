@@ -503,3 +503,9 @@ LIBSYSTEMD_231 {
 global:
         sd_event_get_iteration;
 } LIBSYSTEMD_230;
+
+
+LIBSYSTEMD_234 {
+global:
+        sd_bus_message_appendv;
+} LIBSYSTEMD_231;
