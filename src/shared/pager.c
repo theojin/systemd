@@ -114,10 +114,10 @@ int pager_open(bool jump_to_end) {
                  * shell script that implements a logic that
                  * is similar to this one anyway, but is
                  * Debian-specific. */
-                execlp("pager", "pager", NULL);
+                execl("/usr/bin/pager", "/usr/bin/pager", NULL);
 
-                execlp("less", "less", NULL);
-                execlp("more", "more", NULL);
+                execl("/usr/bin/less", "/usr/bin/less", NULL);
+                execl("/usr/bin/more", "/usr/bin/more", NULL);
 
                 pager_fallback();
                 /* not reached */
