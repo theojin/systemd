@@ -48,7 +48,6 @@ BuildRequires:  pkgconfig(mount)
 # Requires:       dbus                  # for remove circular dependency on OBS
 Requires:       filesystem
 Requires(post): coreutils
-Requires(post): gawk
 Requires(pre):  coreutils
 Requires(pre):  /usr/bin/getent
 Requires(pre):  /usr/sbin/groupadd
