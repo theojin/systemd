@@ -945,7 +945,7 @@ static void svg_do_initcall(int count_only) {
          * when appropriate.
          */
 
-        f = popen("dmesg", "r");
+        f = popen("/usr/bin/dmesg", "r");
         if (!f)
                 return;
 
