@@ -918,7 +918,7 @@ static bool ps_filter(struct ps_struct *ps) {
 static void svg_do_initcall(int count_only) {
         _cleanup_pclose_ FILE *f = NULL;
         double t;
-        char func[256];
+        char func[256] = {0};
         int ret;
         int usecs;
 
@@ -957,11 +957,11 @@ static void svg_do_initcall(int count_only) {
                 if (fgets(l, sizeof(l) - 1, f) == NULL)
                         continue;
 
-                c = sscanf(l, "[%lf] initcall %s %*s %d %*s %d %*s",
+                c = sscanf(l, "[%lf] initcall %255s %*s %d %*s %d %*s",
                            &t, func, &ret, &usecs);
                 if (c != 4) {
                         /* also parse initcalls done by module loading */
-                        c = sscanf(l, "[%lf] initcall %s %*s %*s %d %*s %d %*s",
+                        c = sscanf(l, "[%lf] initcall %255s %*s %*s %d %*s %d %*s",
                                    &t, func, &ret, &usecs);
                         if (c != 4)
                                 continue;
