@@ -113,10 +113,10 @@ void log_sample(int sample, struct list_sample_data **ptr) {
         static int vmstat;
         static int schedstat;
         char buf[4096];
-        char key[256];
-        char val[256];
-        char rt[256];
-        char wt[256];
+        char key[256] = {0};
+        char val[256] = {0};
+        char rt[256] = {0};
+        char wt[256] = {0};
         char *m;
         int c;
         int p;
@@ -160,7 +160,7 @@ void log_sample(int sample, struct list_sample_data **ptr) {
 
         m = buf;
         while (m) {
-                if (sscanf(m, "%s %s", key, val) < 2)
+                if (sscanf(m, "%255s %255s", key, val) < 2)
                         goto vmstat_next;
                 if (streq(key, "pgpgin"))
                         sampledata->blockstat.bi = atoi(val);
@@ -194,7 +194,7 @@ vmstat_next:
         while (m) {
                 int r;
 
-                if (sscanf(m, "%s %*s %*s %*s %*s %*s %*s %s %s", key, rt, wt) < 3)
+                if (sscanf(m, "%255s %*s %*s %*s %*s %*s %*s %255s %255s", key, rt, wt) < 3)
                         goto schedstat_next;
 
                 if (strstr(key, "cpu")) {
@@ -292,7 +292,7 @@ schedstat_next:
                         }
                         buf[s] = '\0';
 
-                        if (!sscanf(buf, "%s %*s %*s", key))
+                        if (!sscanf(buf, "%255s %*s %*s", key))
                                 continue;
 
                         strscpy(ps->name, sizeof(ps->name), key);
@@ -310,7 +310,7 @@ schedstat_next:
                         if (!m)
                                 continue;
 
-                        if (!sscanf(m, "%*s %*s %s", t))
+                        if (!sscanf(m, "%*s %*s %255s", t))
                                 continue;
 
                         r = safe_atod(t, &ps->starttime);
@@ -397,7 +397,7 @@ schedstat_next:
                 }
                 buf[s] = '\0';
 
-                if (!sscanf(buf, "%s %s %*s", rt, wt))
+                if (!sscanf(buf, "%255s %255s %*s", rt, wt))
                         continue;
 
                 ps->sample->next = new0(struct ps_sched_struct, 1);
@@ -498,7 +498,7 @@ catch_rename:
                         }
                         buf[s] = '\0';
 
-                        if (!sscanf(buf, "%s %*s %*s", key))
+                        if (!sscanf(buf, "%255s %*s %*s", key))
                                 continue;
 
                         strscpy(ps->name, sizeof(ps->name), key);
