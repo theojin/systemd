@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ftw.h>
+#include <system/system_info.h>
 
 #include "cgroup-util.h"
 #include "log.h"
@@ -554,7 +555,8 @@ static int trim_cb(const char *path, const struct stat *sb, int typeflag, struct
 
 int cg_trim(const char *controller, const char *path, bool delete_root) {
         _cleanup_free_ char *fs = NULL;
-        int r = 0;
+        int r = 0, r_info = 0;
+        char *model_name = NULL;
 
         assert(path);
 
@@ -567,8 +569,23 @@ int cg_trim(const char *controller, const char *path, bool delete_root) {
                 r = errno ? -errno : -EIO;
 
         if (delete_root) {
-                if (rmdir(fs) < 0 && errno != ENOENT)
-                        return -errno;
+                bool rm = true;
+
+                r_info = system_info_get_platform_string("http://tizen.org/system/model_name", &model_name);
+
+                if(r_info == SYSTEM_INFO_ERROR_NONE && model_name)
+                {
+                        if(!strncmp(model_name, "TW1", 3))
+                                rm = false;
+                }
+
+                if(model_name)
+                        free(model_name);
+
+                if(rm) {
+                        if(rmdir(fs) < 0 && errno != ENOENT)
+                                r = -errno;
+                }
         }
 
         return r;

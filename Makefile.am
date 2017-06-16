@@ -929,10 +929,12 @@ libsystemd_shared_la_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(CAP_CFLAGS) \
 	$(SECCOMP_CFLAGS) \
+	$(CAPI_SYSTEM_INFO_CFLAGS) \
 	-pthread
 
 libsystemd_shared_la_LIBADD = \
 	$(CAP_LIBS) \
+	$(CAPI_SYSTEM_INFO_LIBS) \
 	-lm
 
 # ------------------------------------------------------------------------------
