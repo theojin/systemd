@@ -251,7 +251,7 @@ schedstat_next:
                 /* end of our LL? then append a new record */
                 if (ps->pid != pid) {
                         _cleanup_fclose_ FILE *st = NULL;
-                        char t[32];
+                        char t[32] = {0};
                         struct ps_struct *parent;
                         int r;
 
@@ -310,7 +310,7 @@ schedstat_next:
                         if (!m)
                                 continue;
 
-                        if (!sscanf(m, "%*s %*s %255s", t))
+                        if (!sscanf(m, "%*s %*s %31s", t))
                                 continue;
 
                         r = safe_atod(t, &ps->starttime);
