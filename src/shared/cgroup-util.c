@@ -27,6 +27,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
+#include <linux/sysctl.h>
 #include <ftw.h>
 
 #include "cgroup-util.h"
@@ -567,8 +569,28 @@ int cg_trim(const char *controller, const char *path, bool delete_root) {
                 r = errno ? -errno : -EIO;
 
         if (delete_root) {
-                if (rmdir(fs) < 0 && errno != ENOENT)
-                        return -errno;
+                struct __sysctl_args args;
+                int sysreq[] = { CTL_KERN, KERN_OSRELEASE };
+                char ver[100] = {0};
+                size_t verlen;
+                bool rm = true;
+
+                memset(&args, 0, sizeof(struct __sysctl_args));
+                args.name = sysreq;
+                args.nlen = 2;
+                args.oldval = ver;
+                args.oldlenp = &verlen;
+                verlen = sizeof(ver);
+
+                if (syscall(SYS__sysctl, &args) != -1) {
+                        if (!strncmp(ver, "3.4.39", 6))
+                                rm = false;
+                }
+
+                if (rm) {
+                        if (rmdir(fs) < 0 && errno != ENOENT)
+                                return -errno;
+                }
         }
 
         return r;
