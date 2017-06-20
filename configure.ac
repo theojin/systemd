@@ -241,12 +241,6 @@ AC_CHECK_SIZEOF(rlim_t,,[
 ])
 
 # ------------------------------------------------------------------------------
-# WARNING! Hacks ahead!
-have_capi_system_info=no
-PKG_CHECK_MODULES([CAPI_SYSTEM_INFO], [capi-system-info],
-  [have_capi_system_info=yes],
-  [have_capi_system_info=no])
-# ------------------------------------------------------------------------------
 # we use python to build the man page index, and for systemd-python
 have_python=no
 AC_ARG_WITH([python],

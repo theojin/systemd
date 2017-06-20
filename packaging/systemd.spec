@@ -39,11 +39,12 @@ BuildRequires:  xsltproc
 BuildRequires:  docbook-xsl-stylesheets
 BuildRequires:  pam-devel
 BuildRequires:  pkgconfig
+# BuildRequires:  pkgconfig(dbus-1)     # for remove circular dependency on OBS
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(liblzma)
 BuildRequires:  pkgconfig(libkmod)
 BuildRequires:  pkgconfig(mount)
-BuildRequires:  pkgconfig(capi-system-info)
+# Requires:       dbus                  # for remove circular dependency on OBS
 Requires:       filesystem
 Requires(post): coreutils
 Requires(post): gawk
