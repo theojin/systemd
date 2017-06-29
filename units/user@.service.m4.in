@@ -21,6 +21,6 @@ Delegate=yes
 TasksMax=infinity
 Environment=DBUS_SESSION_BUS_ADDRESS=kernel:path=/sys/fs/kdbus/%i-user/bus;unix:path=/run/user/%i/bus
 Environment=XDG_RUNTIME_DIR=/run/user/%i
-Capabilities=cap_sys_admin,cap_mac_admin,cap_mac_override,cap_setgid,cap_dac_override=i
+Capabilities=cap_sys_admin,cap_mac_admin,cap_setgid,cap_dac_override=i
 SecureBits=keep-caps
 TimeoutStartSec=infinity
