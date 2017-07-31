@@ -12,6 +12,7 @@
 %define with_multiuser 1
 %define WITH_MACHINED 0
 %define WITH_DOC 0
+%define WITH_HOSTNAMED 0
 
 Name:           systemd
 Version:        231
@@ -156,6 +157,9 @@ cp %{SOURCE4} .
         --disable-networkd \
 %if ! %{?WITH_MACHINED}
         --disable-machined \
+%endif
+%if ! %{?WITH_HOSTNAMED}
+        --disable-hostnamed \
 %endif
         --disable-importd \
         --disable-gcrypt \
@@ -376,7 +380,9 @@ fi
 %dir %{_prefix}/lib/kernel/install.d
 %{_prefix}/lib/kernel/install.d/50-depmod.install
 %{_prefix}/lib/kernel/install.d/90-loaderentry.install
+%if %{?WITH_HOSTNAMED}
 %{_bindir}/hostnamectl
+%endif
 %{_bindir}/localectl
 %if %{?WITH_COREDUMP}
 %{_bindir}/coredumpctl
@@ -416,7 +422,9 @@ fi
 %dir %{_prefix}/lib/firmware/updates
 %dir %{_datadir}/systemd
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.systemd1.conf
+%if %{?WITH_HOSTNAMED}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.hostname1.conf
+%endif
 %if %{?with_multiuser}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.login1.conf
 %endif
@@ -528,7 +536,9 @@ fi
 %{_datadir}/systemd/language-fallback-map
 %{_datadir}/dbus-1/services/org.freedesktop.systemd1.service
 %{_datadir}/dbus-1/system-services/org.freedesktop.systemd1.service
+%if %{?WITH_HOSTNAMED}
 %{_datadir}/dbus-1/system-services/org.freedesktop.hostname1.service
+%endif
 %if %{?with_multiuser}
 %{_datadir}/dbus-1/system-services/org.freedesktop.login1.service
 %endif
