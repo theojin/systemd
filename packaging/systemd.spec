@@ -25,8 +25,7 @@ Group:          Base/Startup
 Source0:        https://github.com/systemd/systemd/archive/v%{version}.tar.gz
 Source1:        pamconsole-tmp.conf
 Source2:        %{name}-rpmlintrc
-Source3:        500.systemd_upgrade.sh
-Source4:        test-runner.c
+Source3:        test-runner.c
 Source1001:     systemd.manifest
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
@@ -126,7 +125,7 @@ This modifies systemd to support KDBUS in Tizen.
 %prep
 %setup -q
 cp %{SOURCE1001} .
-cp %{SOURCE4} .
+cp %{SOURCE3} .
 
 %build
 %autogen
@@ -302,10 +301,6 @@ rm -rf %{buildroot}/%{_datadir}/zsh/site-functions/*
 %endif
 
 mkdir -p %{buildroot}/%{_localstatedir}/log/journal
-
-# Upgrade script from 2.4 to 3.0
-install -m 755 -d %{buildroot}%{_datadir}/upgrade/scripts
-install -m 755 %{SOURCE3} %{buildroot}%{_datadir}/upgrade/scripts
 
 ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-daemon.pc
 ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-id128.pc
@@ -557,8 +552,6 @@ fi
 %{_datadir}/factory/etc/pam.d/system-auth
 
 %{_localstatedir}/log/journal
-
-%{_datadir}/upgrade/scripts/500.systemd_upgrade.sh
 
 %files -n libsystemd
 %manifest %{name}.manifest
