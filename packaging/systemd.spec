@@ -271,6 +271,8 @@ rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/systemd-b
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/systemd-modules-load.service
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/systemd-ask-password-console.path
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/multi-user.target.wants/systemd-ask-password-wall.path
+rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-tmpfiles-clean.timer
+rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/systemd-tmpfiles-clean.service
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/timers.target.wants/systemd-tmpfiles-clean.timer
 
 # Move macros to the proper location for Tizen
