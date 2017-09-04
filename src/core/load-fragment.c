@@ -1090,14 +1090,16 @@ int config_parse_capability_set(
                 sum |= ((uint64_t) UINT64_C(1)) << (uint64_t) cap;
         }
 
-        sum = invert ? ~sum : sum;
-
         if (sum == 0 || *capability_set == initial)
-                /* "" or uninitialized data -> replace */
-                *capability_set = sum;
-        else
+                /* "", "~" or uninitialized data -> replace */
+                *capability_set = invert ? ~sum : sum;
+        else {
                 /* previous data -> merge */
-                *capability_set |= sum;
+                if (invert)
+                        *capability_set &= ~sum;
+                else
+                        *capability_set |= sum;
+        }
 
         return 0;
 }
