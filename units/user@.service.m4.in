@@ -11,6 +11,7 @@ After=systemd-user-sessions.service
 
 [Service]
 User=%i
+Group=users
 PAMName=systemd-user
 Type=simple
 ExecStart=-@rootlibexecdir@/systemd --user
