@@ -29,6 +29,8 @@ enum {
         BUS_MESSAGE_DUMP_SUBTREE_ONLY = 2,
 };
 
+int bus_message_dot_dump(sd_bus_message *m, FILE *f);
+
 int bus_message_dump(sd_bus_message *m, FILE *f, unsigned flags);
 
 int bus_creds_dump(sd_bus_creds *c, FILE *f, bool terse);

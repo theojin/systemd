@@ -18,6 +18,7 @@
 ***/
 
 #include <getopt.h>
+#include <hashmap.h>
 
 #include "sd-bus.h"
 
@@ -40,6 +41,7 @@
 #include "terminal-util.h"
 #include "user-util.h"
 #include "util.h"
+#include "signal.h"
 
 static bool arg_no_pager = false;
 static bool arg_legend = true;
@@ -61,6 +63,11 @@ static bool arg_auto_start = true;
 static bool arg_allow_interactive_authorization = true;
 static bool arg_augment_creds = true;
 static usec_t arg_timeout = 0;
+static int arg_sender_pid = 0;
+static int arg_receiver_pid = 0;
+static bool arg_pid = false;
+static bool arg_dot = false;
+static bool monitor_run_condi = true;
 
 #define NAME_IS_ACQUIRED INT_TO_PTR(1)
 #define NAME_IS_ACTIVATABLE INT_TO_PTR(2)
@@ -1078,10 +1085,46 @@ static int message_pcap(sd_bus_message *m, FILE *f) {
         return bus_message_pcap_frame(m, arg_snaplen, f);
 }
 
+static int message_dot(sd_bus_message *m, FILE *f) {
+        return bus_message_dot_dump(m, f);
+}
+
+static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compare_pid, sd_bus_message *m) {
+        pid_t pid;
+        sd_bus_creds *creds = NULL;
+        int r;
+
+        if (!name)
+                return false;
+
+        pid = hashmap_get(hashmap_pids, name);
+        if (pid == 0) {
+                r = sd_bus_get_name_creds(bus, name, SD_BUS_CREDS_PID, &creds);
+                if (r >= 0)
+                        r  = sd_bus_creds_get_pid(creds, &pid);
+
+                if (r < 0)
+                        return false;
+
+                hashmap_put(hashmap_pids, strdup(name), pid);
+        }
+
+        if (compare_pid == pid)
+                return true;
+
+        return false;
+
+}
+
 static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FILE *f)) {
         bool added_something = false;
         char **i;
         int r;
+        bool receiver_pid_match;
+        bool sender_pid_match;
+        _cleanup_hashmap_free_ Hashmap *hashmap_pids = NULL;
+
+        hashmap_pids = hashmap_new(&string_hash_ops);
 
         STRV_FOREACH(i, argv+1) {
                 _cleanup_free_ char *m = NULL;
@@ -1125,9 +1168,10 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
                         return log_error_errno(r, "Failed to add match: %m");
         }
 
-        log_info("Monitoring bus message stream.");
+        while (monitor_run_condi) {
+                receiver_pid_match = true;
+                sender_pid_match = true;
 
-        for (;;) {
                 _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL;
 
                 r = sd_bus_process(bus, &m);
@@ -1135,7 +1179,28 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
                         return log_error_errno(r, "Failed to process bus: %m");
 
                 if (m) {
-                        dump(m, stdout);
+                        if (arg_sender_pid != 0) {
+                                sender_pid_match = check_pid(
+                                                        bus,
+                                                        hashmap_pids,
+                                                        sd_bus_message_get_sender(m),
+                                                        arg_sender_pid,
+                                                        m);
+                        }
+
+                        if (arg_receiver_pid != 0) {
+                                receiver_pid_match = check_pid(
+                                                        bus,
+                                                        hashmap_pids,
+                                                        sd_bus_message_get_destination(m),
+                                                        arg_receiver_pid,
+                                                        m);
+                        }
+
+                        if ((!arg_pid && receiver_pid_match && sender_pid_match) || (arg_pid && (receiver_pid_match || sender_pid_match))) {
+                                dump(m, stdout);
+                        }
+
                         fflush(stdout);
 
                         if (sd_bus_message_is_signal(m, "org.freedesktop.DBus.Local", "Disconnected") > 0) {
@@ -1150,9 +1215,36 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
                         continue;
 
                 r = sd_bus_wait(bus, (uint64_t) -1);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to wait for bus: %m");
+                if (r < 0) {
+                        if(arg_dot)
+                                return 0;
+                        else
+                                return log_error_errno(r, "Failed to wait for bus: %m");
+                }
         }
+
+        return 0;
+
+}
+
+static void monitor_terminate_signal(int sig) {
+        monitor_run_condi = false;
+}
+
+static int dot(sd_bus *bus, char *argv[]) {
+        int r;
+
+        arg_dot = true;
+        signal(SIGINT, monitor_terminate_signal);
+
+        fprintf(stdout, "digraph {\n");
+
+        r = monitor(bus, argv, message_dot);
+
+        fprintf(stdout, "}\n");
+        fflush(stdout);
+
+        return r;
 }
 
 static int capture(sd_bus *bus, char *argv[]) {
@@ -1164,6 +1256,8 @@ static int capture(sd_bus *bus, char *argv[]) {
         }
 
         bus_pcap_header(arg_snaplen, stdout);
+
+        log_info("Monitoring bus message stream.");
 
         r = monitor(bus, argv, message_pcap);
         if (r < 0)
@@ -1706,10 +1800,16 @@ static int help(void) {
                "                          Allow interactive authorization for operation\n"
                "     --timeout=SECS       Maximum time to wait for method call completion\n"
                "     --augment-creds=BOOL Extend credential data with data read from /proc/$PID\n\n"
+               "     --pid=PID            Only show messages with pid equals PID\n"
+               "     --sender-pid=SENDER_PID\n"
+               "                          Only show message with sender pid equals SENDER_PID\n"
+               "     --receiver-pid=RECEIVER_PID\n"
+               "                          Only show message with receiver pid equals RECEIVER_PID\n"
                "Commands:\n"
                "  list                    List bus names\n"
                "  status [SERVICE]        Show bus service, process or bus owner credentials\n"
                "  monitor [SERVICE...]    Show bus traffic\n"
+               "  dot [SERVICE...]        Generate bus traffic graph\n"
                "  capture [SERVICE...]    Capture bus traffic as pcap\n"
                "  tree [SERVICE...]       Show object tree of service\n"
                "  introspect SERVICE OBJECT [INTERFACE]\n"
@@ -1723,6 +1823,27 @@ static int help(void) {
                , program_invocation_short_name);
 
         return 0;
+}
+
+static int arg_parse_pid(char* optarg, bool sender_pid, bool receiver_pid) {
+        int r = 0;
+        if (sender_pid) {
+                if (arg_sender_pid != 0)
+                        log_info("Overwriting previously set sender pid.\n");
+                r = parse_pid(optarg, &arg_sender_pid);
+                if (r < 0)
+                        return r;
+        }
+        if (receiver_pid) {
+                if (sender_pid && receiver_pid) {
+                        arg_receiver_pid = arg_sender_pid;
+                        return r;
+                }
+                if (arg_receiver_pid != 0)
+                        log_info("Overwriting previously set receiver pid.\n");
+                r = parse_pid(optarg, &arg_sender_pid);
+        }
+        return r;
 }
 
 static int parse_argv(int argc, char *argv[]) {
@@ -1747,6 +1868,9 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_ALLOW_INTERACTIVE_AUTHORIZATION,
                 ARG_TIMEOUT,
                 ARG_AUGMENT_CREDS,
+                ARG_PID,
+                ARG_SENDER_PID,
+                ARG_RECEIVER_PID,
         };
 
         static const struct option options[] = {
@@ -1773,6 +1897,9 @@ static int parse_argv(int argc, char *argv[]) {
                 { "allow-interactive-authorization", required_argument, NULL, ARG_ALLOW_INTERACTIVE_AUTHORIZATION },
                 { "timeout",      required_argument, NULL, ARG_TIMEOUT      },
                 { "augment-creds",required_argument, NULL, ARG_AUGMENT_CREDS},
+                { "pid",          required_argument, NULL, ARG_PID},
+                { "sender-pid", required_argument, NULL, ARG_SENDER_PID},
+                { "receiver-pid", required_argument, NULL, ARG_RECEIVER_PID},
                 {},
         };
 
@@ -1923,6 +2050,25 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_augment_creds = !!r;
                         break;
 
+                case ARG_PID:
+                        arg_pid = true;
+                        r = arg_parse_pid(optarg, true, true);
+                        if (r < 0)
+                                return r;
+                        break;
+
+                case ARG_SENDER_PID:
+                        r = arg_parse_pid(optarg, true, false);
+                        if (r < 0)
+                                return 0;
+                        break;
+
+                case ARG_RECEIVER_PID:
+                        r = arg_parse_pid(optarg, false, true);
+                        if (r < 0)
+                                return 0;
+                        break;
+
                 case '?':
                         return -EINVAL;
 
@@ -1967,6 +2113,9 @@ static int busctl_main(sd_bus *bus, int argc, char *argv[]) {
         if (streq(argv[optind], "help"))
                 return help();
 
+        if (streq(argv[optind], "dot"))
+                return dot(bus, argv + optind);
+
         log_error("Unknown command '%s'", argv[optind]);
         return -EINVAL;
 }
@@ -1989,6 +2138,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (streq_ptr(argv[optind], "monitor") ||
+            streq_ptr(argv[optind], "dot") ||
             streq_ptr(argv[optind], "capture")) {
 
                 r = sd_bus_set_monitor(bus, true);
