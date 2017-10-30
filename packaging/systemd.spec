@@ -128,6 +128,10 @@ cp %{SOURCE1001} .
 cp %{SOURCE3} .
 
 %build
+%{?ubsan:
+export CFLAGS+=" -Wno-shadow"
+}
+
 %autogen
 %configure \
         --enable-kdbus \
