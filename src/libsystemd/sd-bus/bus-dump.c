@@ -109,6 +109,77 @@ int bus_message_dot_dump(sd_bus_message *m, FILE *f) {
         return 0;
 }
 
+void dot_dump_unique_name(sd_bus *bus, char *name, Hashmap *hashmap_wkn, FILE *f, sd_bus_message *m) {
+        int r;
+        bool update = false;
+        int obtained;
+        char *uname;
+        char *contents = NULL;
+        char type;
+        union {
+                uint8_t u8;
+                uint16_t u16;
+                int16_t s16;
+                uint32_t u32;
+                int32_t s32;
+                uint64_t u64;
+                int64_t s64;
+                double d64;
+                const char *string;
+                int i;
+        } basic;
+        sd_bus_creds *creds = NULL;
+
+        if (m->member && !strcmp(m->member, "NameOwnerChanged")) {
+
+                r = sd_bus_message_peek_type(m, &type, &contents);
+
+                if (r > 0 && bus_type_is_container(type) <= 0) {
+                        if (r >= 0)
+                                r = sd_bus_message_read_basic(m, type, &basic);
+
+                        if (r >= 0) {
+                                char *free_name = hashmap_get(hashmap_wkn, basic.string);
+                                free(free_name);
+                                update = true;
+                        }
+                }
+        }
+
+        int x, y;
+
+        if (!f)
+                f = stdout;
+
+        if (!name)
+                return;
+
+        if (name[0] == ':')
+                return;
+
+        obtained = hashmap_get(hashmap_wkn, name);
+
+        if (obtained && !update)
+                return;
+
+        r = sd_bus_get_name_creds(bus, name, SD_BUS_CREDS_UNIQUE_NAME, &creds);
+
+        if (r >= 0)
+                r = sd_bus_creds_get_unique_name(creds, &uname);
+
+        if (r < 0)
+                return;
+
+        fprintf(f, "\t\"%s\"->\"%s\" [ color = blue, penwidth = 4];\n", name, uname);
+
+        if (update)
+                hashmap_update(hashmap_wkn, name, strdup(uname));
+        else
+                hashmap_put(hashmap_wkn, strdup(name), strdup(uname));
+
+}
+
+
 int bus_message_dump(sd_bus_message *m, FILE *f, unsigned flags) {
         unsigned level = 1;
         int r;

@@ -21,6 +21,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <hashmap.h>
 
 #include "sd-bus.h"
 
@@ -30,6 +31,7 @@ enum {
 };
 
 int bus_message_dot_dump(sd_bus_message *m, FILE *f);
+void dot_dump_unique_name(sd_bus *bus, char *name, Hashmap *hashmap_wkn, FILE *f, sd_bus_message *m);
 
 int bus_message_dump(sd_bus_message *m, FILE *f, unsigned flags);
 
