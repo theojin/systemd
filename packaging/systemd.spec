@@ -13,6 +13,7 @@
 %define WITH_MACHINED 0
 %define WITH_DOC 0
 %define WITH_HOSTNAMED 0
+%define WITH_NETWORKD 1
 
 Name:           systemd
 Version:        231
@@ -153,7 +154,9 @@ cp %{SOURCE3} .
         --disable-polkit \
         --disable-timesyncd \
         --disable-resolved \
+%if ! %{?WITH_NETWORKD}
         --disable-networkd \
+%endif        
 %if ! %{?WITH_MACHINED}
         --disable-machined \
 %endif
@@ -315,6 +318,7 @@ ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
 /usr/bin/getent group tape >/dev/null 2>&1 || /usr/sbin/groupadd -r -g 33 tape >/dev/null 2>&1 || :
 /usr/bin/getent group dialout >/dev/null 2>&1 || /usr/sbin/groupadd -r -g 18 dialout >/dev/null 2>&1 || :
 /usr/bin/getent group floppy >/dev/null 2>&1 || /usr/sbin/groupadd -r -g 19 floppy >/dev/null 2>&1 || :
+/usr/bin/getent passwd systemd-network >/dev/null 2>&1 || /usr/sbin/useradd systemd-network >/dev/null 2>&1 || :
 /usr/bin/systemctl stop systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udevd.service >/dev/null 2>&1 || :
 
 # Rename configuration files that changed their names
@@ -354,6 +358,7 @@ if [ $1 -eq 0 ] ; then
                 systemd-readahead-replay.service \
                 systemd-readahead-collect.service >/dev/null 2>&1 || :
 fi
+/usr/bin/getent passwd systemd-network >/dev/null 2>&1 && /usr/sbin/userdel systemd-network >/dev/null 2>&1 || :
 
 %post -n libsystemd -p /sbin/ldconfig
 %postun -n libsystemd  -p /sbin/ldconfig
@@ -419,6 +424,9 @@ fi
 %dir %{_prefix}/lib/firmware/updates
 %dir %{_datadir}/systemd
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.systemd1.conf
+%if %{?WITH_NETWORKD}
+%config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.network1.conf
+%endif
 %if %{?WITH_HOSTNAMED}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.hostname1.conf
 %endif
@@ -476,6 +484,7 @@ fi
 %{_bindir}/udevadm
 %{_bindir}/systemd-escape
 %{_bindir}/systemd-path
+%{_bindir}/networkctl
 %{_prefix}/lib/sysctl.d/*.conf
 %{_prefix}/lib/systemd/systemd
 %{_prefix}/lib/systemd/system
@@ -533,6 +542,9 @@ fi
 %{_datadir}/systemd/language-fallback-map
 %{_datadir}/dbus-1/services/org.freedesktop.systemd1.service
 %{_datadir}/dbus-1/system-services/org.freedesktop.systemd1.service
+%if %{?WITH_NETWORKD}
+%{_datadir}/dbus-1/system-services/org.freedesktop.network1.service
+%endif
 %if %{?WITH_HOSTNAMED}
 %{_datadir}/dbus-1/system-services/org.freedesktop.hostname1.service
 %endif
