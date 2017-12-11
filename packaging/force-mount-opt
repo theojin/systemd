@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+
+/usr/bin/mount | grep " /opt " > /dev/null ||  /usr/bin/mount -L system-data /opt -o defaults,noatime

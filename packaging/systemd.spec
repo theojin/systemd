@@ -26,6 +26,7 @@ Source0:        https://github.com/systemd/systemd/archive/v%{version}.tar.gz
 Source1:        pamconsole-tmp.conf
 Source2:        %{name}-rpmlintrc
 Source3:        test-runner.c
+Source4:        force-mount-opt
 Source1001:     systemd.manifest
 BuildRequires:  gperf
 BuildRequires:  intltool >= 0.40.0
@@ -233,6 +234,9 @@ EOF
 # Make sure the user generators dir exists too
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/system-generators
 /usr/bin/mkdir -p %{buildroot}%{_prefix}/lib/systemd/user-generators
+
+# copy /opt mount script
+install -m 755 %{SOURCE4} %{buildroot}%{_prefix}/lib/systemd/system-generators
 
 # Create new-style configuration files so that we can ghost-own them
 /usr/bin/touch %{buildroot}%{_sysconfdir}/hostname
@@ -511,6 +515,7 @@ fi
 %{_prefix}/lib/systemd/system-generators/systemd-getty-generator
 %{_prefix}/lib/systemd/system-generators/systemd-fstab-generator
 %{_prefix}/lib/systemd/system-generators/systemd-system-update-generator
+%{_prefix}/lib/systemd/system-generators/force-mount-opt
 %{_prefix}/lib/tmpfiles.d/home.conf
 %{_prefix}/lib/tmpfiles.d/journal-nocow.conf
 %{_prefix}/lib/tmpfiles.d/legacy.conf
