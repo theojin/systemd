@@ -3,7 +3,7 @@
 KERNEL=="null", SECLABEL{smack}="*"
 KERNEL=="zero", SECLABEL{smack}="*"
 KERNEL=="console", SECLABEL{smack}="*"
-KERNEL=="kmsg", SECLABEL{smack}="*"
+KERNEL=="kmsg", GROUP="log", MODE="0660", SECLABEL{smack}="*"
 KERNEL=="video*", SECLABEL{smack}="*"
 KERNEL=="card*", SECLABEL{smack}="*"
 KERNEL=="ptmx", SECLABEL{smack}="*"
