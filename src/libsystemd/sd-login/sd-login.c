@@ -1062,10 +1062,10 @@ _public_ int sd_login_monitor_get_timeout(sd_login_monitor *m, uint64_t *timeout
 }
 
 #define GUMD_CONF_FILE    "/etc/gumd/gumd.conf"
-#define UID_MIN           5001
-#define UID_MAX           60000
-#define CONTAINER_UID_MIN 60001
-#define CONTAINER_UID_MAX 60100
+#define UID_MIN           5000
+#define UID_MAX           5999
+#define CONTAINER_UID_MIN 6000
+#define CONTAINER_UID_MAX 6999
 
 static uid_t uid_min = 0, uid_max = 0;
 static uid_t con_uid_min = 0, con_uid_max = 0;
