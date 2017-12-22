@@ -60,6 +60,55 @@ static char *indent(unsigned level, unsigned flags) {
         return p;
 }
 
+int bus_message_dot_dump(sd_bus_message *m, FILE *f) {
+        assert(m);
+
+        if (!f)
+                f = stdout;
+
+        if(m->header->type != SD_BUS_MESSAGE_METHOD_RETURN && m->header->type != SD_BUS_MESSAGE_METHOD_ERROR) {
+
+                fprintf(f, "\t\"");
+                if (m->sender)
+                        fprintf(f, "%s", m->sender);
+                else
+                        fprintf(f, "no source");
+
+                fprintf(f, "\"->\"");
+
+                /* https://dbus.freedesktop.org/doc/dbus-specification.html#message-bus-routing
+                 * When the message bus receives a signal,
+                 * if the DESTINATION field is absent,
+                 * it is considered to be a broadcast signal,
+                 * and is sent to all applications with message
+                 * matching rules that match the message.
+                 * When the message bus receives a method call,
+                 * if the DESTINATION field is absent,
+                 * the call is taken to be a standard one-to-one message
+                 * and interpreted by the message bus itself. */
+                if (m->destination)
+                        fprintf(f, "%s", m->destination);
+                else {
+                        if (m->header->type == SD_BUS_MESSAGE_SIGNAL)
+                                fprintf(f, "<-BROADCAST->");
+                        else
+                                fprintf(f, "org.freedesktop.DBus");
+                }
+                fprintf(f, "\" [ label = \"");
+                if (m->header->type != SD_BUS_MESSAGE_METHOD_CALL)
+                        fprintf(f, "%s \\n ", bus_message_type_to_string(m->header->type));
+
+                if (m->interface)
+                        fprintf(f, "%s", m->interface);
+
+                if (m->member)
+                        fprintf(f, " \\n %s", m->member);
+                fprintf(f, "\"];\n");
+        }
+
+        return 0;
+}
+
 int bus_message_dump(sd_bus_message *m, FILE *f, unsigned flags) {
         unsigned level = 1;
         int r;
