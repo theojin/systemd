@@ -68,6 +68,7 @@ static int arg_receiver_pid = 0;
 static bool arg_pid = false;
 static bool arg_dot = false;
 static bool monitor_run_condi = true;
+static bool arg_well_known_names;
 
 #define NAME_IS_ACQUIRED INT_TO_PTR(1)
 #define NAME_IS_ACTIVATABLE INT_TO_PTR(2)
@@ -1077,19 +1078,26 @@ static int introspect(sd_bus *bus, char **argv) {
         return 0;
 }
 
-static int message_dump(sd_bus_message *m, FILE *f) {
+static int message_dump(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus *bus) {
         return bus_message_dump(m, f, BUS_MESSAGE_DUMP_WITH_HEADER);
 }
 
-static int message_pcap(sd_bus_message *m, FILE *f) {
+static int message_pcap(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus *bus) {
         return bus_message_pcap_frame(m, arg_snaplen, f);
 }
 
-static int message_dot(sd_bus_message *m, FILE *f) {
+static int message_dot(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus *bus) {
+
+        if (arg_well_known_names){
+
+                dot_dump_unique_name(bus, sd_bus_message_get_sender(m), hashmap_wkn, f, m);
+                dot_dump_unique_name(bus, sd_bus_message_get_destination(m), hashmap_wkn, f, m);
+        }
+
         return bus_message_dot_dump(m, f);
 }
 
-static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compare_pid, sd_bus_message *m) {
+static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compare_pid) {
         pid_t pid;
         sd_bus_creds *creds = NULL;
         int r;
@@ -1116,19 +1124,22 @@ static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compar
 
 }
 
-static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FILE *f)) {
+static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus *bus)) {
         bool added_something = false;
         char **i;
         int r;
         bool receiver_pid_match;
         bool sender_pid_match;
+        sd_bus_creds *creds = NULL;
         _cleanup_hashmap_free_ Hashmap *hashmap_pids = NULL;
+        _cleanup_hashmap_free_ Hashmap *hashmap_names = NULL;
+        _cleanup_strv_free_ char **acquired = NULL, **activatable = NULL;
 
         hashmap_pids = hashmap_new(&string_hash_ops);
+        hashmap_names = hashmap_new(&string_hash_ops);
 
         STRV_FOREACH(i, argv+1) {
                 _cleanup_free_ char *m = NULL;
-
                 if (!service_name_is_valid(*i)) {
                         log_error("Invalid service name '%s'", *i);
                         return -EINVAL;
@@ -1179,13 +1190,13 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
                         return log_error_errno(r, "Failed to process bus: %m");
 
                 if (m) {
+
                         if (arg_sender_pid != 0) {
                                 sender_pid_match = check_pid(
                                                         bus,
                                                         hashmap_pids,
                                                         sd_bus_message_get_sender(m),
-                                                        arg_sender_pid,
-                                                        m);
+                                                        arg_sender_pid);
                         }
 
                         if (arg_receiver_pid != 0) {
@@ -1193,12 +1204,11 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
                                                         bus,
                                                         hashmap_pids,
                                                         sd_bus_message_get_destination(m),
-                                                        arg_receiver_pid,
-                                                        m);
+                                                        arg_receiver_pid);
                         }
 
                         if ((!arg_pid && receiver_pid_match && sender_pid_match) || (arg_pid && (receiver_pid_match || sender_pid_match))) {
-                                dump(m, stdout);
+                                dump(m, stdout, hashmap_names, bus);
                         }
 
                         fflush(stdout);
@@ -1805,6 +1815,8 @@ static int help(void) {
                "                          Only show message with sender pid equals SENDER_PID\n"
                "     --receiver-pid=RECEIVER_PID\n"
                "                          Only show message with receiver pid equals RECEIVER_PID\n"
+               "     --well-known-names=BOOL \n"
+               "                          Show well know names connected to unique names on graph\n"
                "Commands:\n"
                "  list                    List bus names\n"
                "  status [SERVICE]        Show bus service, process or bus owner credentials\n"
@@ -1871,6 +1883,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_PID,
                 ARG_SENDER_PID,
                 ARG_RECEIVER_PID,
+                ARG_WELL_KNOWN_NAMES,
         };
 
         static const struct option options[] = {
@@ -1900,6 +1913,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "pid",          required_argument, NULL, ARG_PID},
                 { "sender-pid", required_argument, NULL, ARG_SENDER_PID},
                 { "receiver-pid", required_argument, NULL, ARG_RECEIVER_PID},
+                { "well-known-names", required_argument, NULL, ARG_WELL_KNOWN_NAMES},
                 {},
         };
 
@@ -2067,6 +2081,10 @@ static int parse_argv(int argc, char *argv[]) {
                         r = arg_parse_pid(optarg, false, true);
                         if (r < 0)
                                 return 0;
+                        break;
+
+                case ARG_WELL_KNOWN_NAMES:
+                        arg_well_known_names = parse_boolean(optarg);
                         break;
 
                 case '?':
