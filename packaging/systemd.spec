@@ -529,6 +529,7 @@ fi
 %{_sbindir}/telinit
 %{_sbindir}/runlevel
 %{_sbindir}/udevadm
+%{_datadir}/systemd/graphinfo.gvpr
 %{_datadir}/systemd/kbd-model-map
 %{_datadir}/systemd/language-fallback-map
 %{_datadir}/dbus-1/services/org.freedesktop.systemd1.service

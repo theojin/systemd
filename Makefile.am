@@ -4881,6 +4881,7 @@ BUSNAMES_TARGET_WANTS += \
 	org.freedesktop.locale1.busname
 
 dist_pkgdata_DATA = \
+	src/libsystemd/sd-bus/graphinfo.gvpr \
 	src/locale/kbd-model-map \
 	src/locale/language-fallback-map
 
