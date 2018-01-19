@@ -7842,7 +7842,7 @@ static int halt_now(enum action a) {
 
                 r = read_one_line_file("/run/systemd/reboot-param", &param);
                 if (r < 0)
-                        log_warning_errno(r, "Failed to read reboot parameter file: %m");
+                        log_debug_errno(r, "Failed to read reboot parameter file: %m");
 
                 if (!isempty(param)) {
                         log_info("Rebooting with argument '%s'.", param);
