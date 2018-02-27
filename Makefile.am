@@ -5942,13 +5942,13 @@ nodist_udevrules_DATA += \
 else
 MULTI_USER_TARGET_WANTS += \
 	user@5001.service
-endif
 
 dist_systemunit_DATA += \
 	units/run-user-5001.mount
 
 SYSINIT_TARGET_WANTS += \
 	run-user-5001.mount
+endif
 
 polkitpolicy_in_files += \
 	src/login/org.freedesktop.login1.policy.in
