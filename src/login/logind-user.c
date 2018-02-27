@@ -328,6 +328,32 @@ int user_load(User *u) {
         return r;
 }
 
+static int user_mkdir_system_share_path(User *u) {
+        int r;
+        gid_t system_share_gid;
+        _cleanup_free_ char *t = NULL;
+        const char *system_share_group = "system_share";
+
+        r = get_group_creds(&system_share_group, &system_share_gid);
+        if (r < 0)
+                return r;
+
+        /* mount option "gid=system_share" doesn't work. So, we have to modify gid here*/
+        r = chmod_and_chown(u->runtime_path, 0750, u->uid, system_share_gid);
+        if (r < 0)
+                return log_error_errno(r, "Failed to change runtime directory ownership and mode: %m");
+
+        r = asprintf(&t, "/run/user/"UID_FMT"/system_share", u->uid);
+        if (r < 0)
+                return log_oom();
+
+        r = mkdir_safe_label(t, 0750, u->uid, system_share_gid);
+        if (r < 0)
+                return log_error_errno(r, "Failed to create '%s': %m", t);
+
+        return 0;
+}
+
 static int user_mkdir_runtime_path(User *u) {
         int r;
 
@@ -372,6 +398,10 @@ static int user_mkdir_runtime_path(User *u) {
                 r = label_fix(u->runtime_path, false, false);
                 if (r < 0)
                         log_warning_errno(r, "Failed to fix label of '%s', ignoring: %m", u->runtime_path);
+
+                r = user_mkdir_system_share_path(u);
+                if (r < 0)
+                        goto fail;
         }
 
         return 0;
