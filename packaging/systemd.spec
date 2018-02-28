@@ -9,7 +9,6 @@
 %define WITH_BACKLIGHT 0
 %define WITH_TIMEDATED 0
 %define WITH_RFKILL 0
-%define with_multiuser 1
 %define WITH_MACHINED 0
 %define WITH_DOC 0
 %define WITH_HOSTNAMED 0
@@ -171,9 +170,6 @@ cp %{SOURCE3} .
         --with-sysvinit-path= \
         --with-sysvrcnd-path= \
         --with-smack-run-label=System::Privileged \
-%if ! %{?with_multiuser}
-        --disable-logind \
-%endif
         cc_cv_CFLAGS__flto=no
 make %{?_smp_mflags} \
         systemunitdir=%{_unitdir} \
@@ -215,9 +211,7 @@ EOF
 /usr/bin/ln -s ../bin/systemctl %{buildroot}%{_sbindir}/runlevel
 
 # legacy links
-%if %{?with_multiuser}
 /usr/bin/ln -s loginctl %{buildroot}%{_bindir}/systemd-loginctl
-%endif
 
 # We create all wants links manually at installation time to make sure
 # they are not owned and hence overriden by rpm after the used deleted
@@ -318,9 +312,7 @@ ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
 /usr/bin/systemctl stop systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udevd.service >/dev/null 2>&1 || :
 
 # Rename configuration files that changed their names
-%if %{?with_multiuser}
 /usr/bin/mv -n %{_sysconfdir}/systemd/systemd-logind.conf %{_sysconfdir}/systemd/logind.conf >/dev/null 2>&1 || :
-%endif
 /usr/bin/mv -n %{_sysconfdir}/systemd/systemd-journald.conf %{_sysconfdir}/systemd/journald.conf >/dev/null 2>&1 || :
 
 %post
@@ -363,9 +355,7 @@ fi
 %files
 %manifest %{name}.manifest
 %license LICENSE.LGPL2.1  LICENSE.GPL2
-%if %{with_multiuser}
 %config %{_sysconfdir}/pam.d/systemd-user
-%endif
 %{_bindir}/bootctl
 %{_bindir}/busctl
 %{_bindir}/kernel-install
@@ -422,9 +412,7 @@ fi
 %if %{?WITH_HOSTNAMED}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.hostname1.conf
 %endif
-%if %{?with_multiuser}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.login1.conf
-%endif
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.locale1.conf
 %if %{?WITH_TIMEDATED}
 %config(noreplace) %{_sysconfdir}/dbus-1/system.d/org.freedesktop.timedate1.conf
@@ -437,9 +425,7 @@ fi
 %endif
 %config(noreplace) %{_sysconfdir}/systemd/system.conf
 %config(noreplace) %{_sysconfdir}/systemd/user.conf
-%if %{?with_multiuser}
 %config(noreplace) %{_sysconfdir}/systemd/logind.conf
-%endif
 %config(noreplace) %{_sysconfdir}/systemd/journald.conf
 %config(noreplace) %{_sysconfdir}/udev/udev.conf
 %{_sysconfdir}/xdg/systemd
@@ -457,10 +443,8 @@ fi
 %{_bindir}/systemd-tty-ask-password-agent
 %{_bindir}/systemd-machine-id-setup
 %{_bindir}/systemd-socket-activate
-%if %{?with_multiuser}
 %{_bindir}/loginctl
 %{_bindir}/systemd-loginctl
-%endif
 %{_bindir}/journalctl
 %{_bindir}/systemd-tmpfiles
 %{_bindir}/systemd-nspawn
@@ -470,9 +454,7 @@ fi
 %{_bindir}/systemd-cgtop
 %{_bindir}/systemd-delta
 %{_bindir}/systemd-detect-virt
-%if %{?with_multiuser}
 %{_bindir}/systemd-inhibit
-%endif
 %{_bindir}/udevadm
 %{_bindir}/systemd-escape
 %{_bindir}/systemd-path
@@ -537,9 +519,7 @@ fi
 %if %{?WITH_HOSTNAMED}
 %{_datadir}/dbus-1/system-services/org.freedesktop.hostname1.service
 %endif
-%if %{?with_multiuser}
 %{_datadir}/dbus-1/system-services/org.freedesktop.login1.service
-%endif
 %{_datadir}/dbus-1/system-services/org.freedesktop.locale1.service
 %if %{?WITH_TIMEDATED}
 %{_datadir}/dbus-1/system-services/org.freedesktop.timedate1.service
@@ -559,9 +539,7 @@ fi
 %files -n libsystemd
 %manifest %{name}.manifest
 %license LICENSE.LGPL2.1
-%if %{?with_multiuser}
 %{_libdir}/security/pam_systemd.so
-%endif
 %{_libdir}/libsystemd.so.*
 %{_libdir}/libudev.so.*
 %{_libdir}/libnss_myhostname.so.2
