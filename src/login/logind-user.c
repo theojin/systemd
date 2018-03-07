@@ -21,6 +21,7 @@
 #include <string.h>
 #include <sys/mount.h>
 #include <unistd.h>
+#include <sys/xattr.h>
 
 #include "alloc-util.h"
 #include "bus-common-errors.h"
@@ -350,6 +351,12 @@ static int user_mkdir_system_share_path(User *u) {
         r = mkdir_safe_label(t, 0750, u->uid, system_share_gid);
         if (r < 0)
                 return log_error_errno(r, "Failed to create '%s': %m", t);
+
+        if (mac_smack_use()) {
+                r = lsetxattr(t, "security.SMACK64", SMACK_STAR_LABEL, strlen(SMACK_STAR_LABEL), 0);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to apply smack label * to '%s': %m", t);
+        }
 
         return 0;
 }
