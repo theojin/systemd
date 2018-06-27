@@ -1461,14 +1461,8 @@ int main(int argc, char *argv[]) {
                                  * saving time change. All kernel local time concepts will be treated
                                  * as UTC that way.
                                  */
-                                (void) clock_reset_timewarp();
+                                clock_reset_timewarp();
                         }
-
-                        r = clock_apply_epoch();
-                        if (r < 0)
-                                log_error_errno(r, "Current system time is before build time, but cannot correct: %m");
-                        else if (r > 0)
-                                log_info("System time before build time, advancing clock.");
                 }
 
                 /* Set the default for later on, but don't actually
