@@ -1097,7 +1097,7 @@ static int message_dot(sd_bus_message *m, FILE *f, Hashmap *hashmap_wkn, sd_bus 
         return bus_message_dot_dump(m, f);
 }
 
-static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compare_pid) {
+static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, const char *name, int compare_pid) {
         pid_t pid;
         sd_bus_creds *creds = NULL;
         int r;
@@ -1105,7 +1105,7 @@ static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compar
         if (!name)
                 return false;
 
-        pid = hashmap_get(hashmap_pids, name);
+        pid = (pid_t)hashmap_get(hashmap_pids, name);
         if (pid == 0) {
                 r = sd_bus_get_name_creds(bus, name, SD_BUS_CREDS_PID, &creds);
                 if (r >= 0)
@@ -1114,7 +1114,7 @@ static bool check_pid(sd_bus *bus, Hashmap *hashmap_pids, char *name, int compar
                 if (r < 0)
                         return false;
 
-                hashmap_put(hashmap_pids, strdup(name), pid);
+                hashmap_put(hashmap_pids, strdup(name), (void*)pid);
         }
 
         if (compare_pid == pid)
@@ -1259,10 +1259,10 @@ static int monitor(sd_bus *bus, char *argv[], int (*dump)(sd_bus_message *m, FIL
             return r;
 
         while (monitor_run_condi) {
+                _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL;
+
                 receiver_pid_match = true;
                 sender_pid_match = true;
-
-                _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL;
 
                 r = sd_bus_process(bus, &m);
                 if (r < 0)

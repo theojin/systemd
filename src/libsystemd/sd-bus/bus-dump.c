@@ -109,7 +109,7 @@ int bus_message_dot_dump(sd_bus_message *m, FILE *f) {
         return 0;
 }
 
-void dot_dump_unique_name(sd_bus *bus, char *name, Hashmap *hashmap_wkn, FILE *f, sd_bus_message *m) {
+void dot_dump_unique_name(sd_bus *bus, const char *name, Hashmap *hashmap_wkn, FILE *f, sd_bus_message *m) {
         int r;
         bool update = false;
         int obtained;
