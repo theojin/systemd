@@ -321,12 +321,54 @@ ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
 /usr/bin/mkdir -p /etc/systemd/network
 /usr/bin/ln -sf /dev/null /etc/systemd/network/99-default.link
 
-#link system, user unit directory in conf dir to opt conf dir
+# link system, user unit directory in conf dir to opt conf dir
 /usr/bin/mkdir -p /opt/etc/systemd
 /usr/bin/mv /etc/systemd/system /opt/etc/systemd/system 
 /usr/bin/mv /etc/systemd/user /opt/etc/systemd/user
 /usr/bin/ln -s ../../opt/etc/systemd/system /etc/systemd/system
 /usr/bin/ln -s ../../opt/etc/systemd/user /etc/systemd/user
+
+# Set the smack label of executable binary tools
+chsmack %{_bindir}/bootctl -a "System::Tools"
+chsmack %{_bindir}/busctl -a "System::Tools"
+chsmack %{_bindir}/kernel-install -a "System::Tools"
+%if %{?WITH_MACHINED}
+chsmack %{_bindir}/machinectl -a "System::Tools"
+%endif
+chsmack %{_bindir}/systemd-run -a "System::Tools"
+%if %{?WITH_HOSTNAMED}
+chsmack %{_bindir}/hostnamectl -a "System::Tools"
+%endif
+chsmack %{_bindir}/localectl -a "System::Tools"
+%if %{?WITH_COREDUMP}
+chsmack %{_bindir}/coredumpctl -a "System::Tools"
+%endif
+%if %{?WITH_TIMEDATED}
+chsmack %{_bindir}/timedatectl -a "System::Tools"
+%endif
+chsmack %{_bindir}/systemd -a "System::Tools"
+chsmack %{_bindir}/systemctl -a "System::Tools"
+chsmack %{_bindir}/systemd-notify -a "System::Tools"
+chsmack %{_bindir}/systemd-ask-password -a "System::Tools"
+chsmack %{_bindir}/systemd-tty-ask-password-agent -a "System::Tools"
+chsmack %{_bindir}/systemd-machine-id-setup -a "System::Tools"
+chsmack %{_bindir}/systemd-socket-activate -a "System::Tools"
+chsmack %{_bindir}/loginctl -a "System::Tools"
+chsmack %{_bindir}/systemd-loginctl -a "System::Tools"
+chsmack %{_bindir}/journalctl -a "System::Tools"
+chsmack %{_bindir}/systemd-tmpfiles -a "System::Tools"
+chsmack %{_bindir}/systemd-nspawn -a "System::Tools"
+chsmack %{_bindir}/systemd-stdio-bridge -a "System::Tools"
+chsmack %{_bindir}/systemd-cat -a "System::Tools"
+chsmack %{_bindir}/systemd-cgls -a "System::Tools"
+chsmack %{_bindir}/systemd-cgtop -a "System::Tools"
+chsmack %{_bindir}/systemd-delta -a "System::Tools"
+chsmack %{_bindir}/systemd-detect-virt -a "System::Tools"
+chsmack %{_bindir}/systemd-inhibit -a "System::Tools"
+chsmack %{_bindir}/udevadm -a "System::Tools"
+chsmack %{_bindir}/systemd-escape -a "System::Tools"
+chsmack %{_bindir}/systemd-path -a "System::Tools"
+chsmack %{_prefix}/lib/systemd/* -a "System::Tools"
 
 %postun
 if [ $1 -ge 1 ] ; then
