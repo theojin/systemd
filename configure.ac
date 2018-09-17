@@ -1383,6 +1383,20 @@ AS_IF([test "x$enable_manpages" != xno], [
 AM_CONDITIONAL(ENABLE_MANPAGES, [test "x$have_manpages" = "xyes"])
 
 # ------------------------------------------------------------------------------
+journald_kmsg=no
+AC_ARG_ENABLE(journald-kmsg, AS_HELP_STRING([--disable-journald-kmsg], [Disable journald kmsg]),
+                [case "${enableval}" in
+                        yes) journald-kmsg=yes ;;
+                        no) journald-kmsg=no ;;
+                        *) AC_MSG_ERROR(bad value ${enableval} for --disable-journald-kmsg) ;;
+                esac],
+                [journald_kmsg=no])
+
+if test "x${journald_kmsg}" != xno; then
+       AC_DEFINE(TIZEN_JOURNALD_KMSG, 1, [Define if journald kmsg is on])
+fi
+
+# ------------------------------------------------------------------------------
 AC_ARG_ENABLE(hibernate,
        [AC_HELP_STRING([--disable-hibernate], [disable hibernation support])],
        enable_hibernate=$enableval, enable_hibernate=yes)

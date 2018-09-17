@@ -1189,10 +1189,10 @@ static int service_spawn(
 
         /* TODO workaround code */
         if (UNIT(s)->cgroup_realized) {
-                _cleanup_free_ char *path = NULL;
-                path = unit_default_cgroup_path(UNIT(s));
+                _cleanup_free_ char *path_temp = NULL;
+                path_temp = unit_default_cgroup_path(UNIT(s));
 
-                if (cg_check_cgroup_exist(path) < 0) {
+                if (cg_check_cgroup_exist(path_temp) < 0) {
                         log_unit_error(UNIT(s)->id, "CGROUP ERROR! (%s) is already realized but not exists", UNIT(s)->id);
                         UNIT(s)->cgroup_realized = false;
                         UNIT(s)->cgroup_realized_mask = 0;
