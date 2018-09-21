@@ -379,6 +379,7 @@ int server_flush_dev_kmsg(Server *s) {
         return 0;
 }
 
+#ifdef TIZEN_JOURNALD_KMSG
 static int dispatch_dev_kmsg(sd_event_source *es, int fd, uint32_t revents, void *userdata) {
         Server *s = userdata;
 
@@ -394,9 +395,9 @@ static int dispatch_dev_kmsg(sd_event_source *es, int fd, uint32_t revents, void
 
         return server_read_dev_kmsg(s);
 }
+#endif
 
 int server_open_dev_kmsg(Server *s) {
-        int r;
 
         assert(s);
 
@@ -408,9 +409,8 @@ int server_open_dev_kmsg(Server *s) {
         }
 
 // Requested by Profiling Part & PM Part - DISABLE KMSG online handling from journald
-// Plz, ask them about "why?"
-#if 0
-        r = sd_event_add_io(s->event, &s->dev_kmsg_event_source, s->dev_kmsg_fd, EPOLLIN, dispatch_dev_kmsg, s);
+#ifdef TIZEN_JOURNALD_KMSG
+        int r = sd_event_add_io(s->event, &s->dev_kmsg_event_source, s->dev_kmsg_fd, EPOLLIN, dispatch_dev_kmsg, s);
         if (r < 0) {
 
                 /* This will fail with EPERM on older kernels where
@@ -435,11 +435,13 @@ int server_open_dev_kmsg(Server *s) {
 
         return 0;
 
+#ifdef TIZEN_JOURNALD_KMSG
 fail:
         s->dev_kmsg_event_source = sd_event_source_unref(s->dev_kmsg_event_source);
         s->dev_kmsg_fd = safe_close(s->dev_kmsg_fd);
 
         return r;
+#endif
 }
 
 int server_open_kernel_seqnum(Server *s) {

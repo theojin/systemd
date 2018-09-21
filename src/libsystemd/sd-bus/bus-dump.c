@@ -112,9 +112,9 @@ int bus_message_dot_dump(sd_bus_message *m, FILE *f) {
 void dot_dump_unique_name(sd_bus *bus, const char *name, Hashmap *hashmap_wkn, FILE *f, sd_bus_message *m) {
         int r;
         bool update = false;
-        int obtained;
-        char *uname;
-        char *contents = NULL;
+        char *obtained;
+        const char *uname;
+        const char *contents = NULL;
         char type;
         union {
                 uint8_t u8;
@@ -145,8 +145,6 @@ void dot_dump_unique_name(sd_bus *bus, const char *name, Hashmap *hashmap_wkn, F
                         }
                 }
         }
-
-        int x, y;
 
         if (!f)
                 f = stdout;

@@ -1067,7 +1067,7 @@ _public_ int sd_login_monitor_get_timeout(sd_login_monitor *m, uint64_t *timeout
 #define CONTAINER_UID_MIN 6000
 #define CONTAINER_UID_MAX 6999
 
-static uid_t uid_min = 0, uid_max = 0;
+static uid_t uid_minimum = 0, uid_maximum = 0;
 static uid_t con_uid_min = 0, con_uid_max = 0;
 
 static int sd_get_uid_range(uid_t *start, uid_t *end)
@@ -1075,23 +1075,23 @@ static int sd_get_uid_range(uid_t *start, uid_t *end)
         int r;
         _cleanup_free_ char *c_uid_min = NULL, *c_uid_max = NULL;
 
-        if(uid_min == 0) {
+        if(uid_minimum == 0) {
                r = parse_env_file(GUMD_CONF_FILE, NEWLINE, "UID_MIN", &c_uid_min, NULL);
                if (r < 0)
                        return r;
-               uid_min = atoi(c_uid_min);
+               uid_minimum = atoi(c_uid_min);
                c_uid_min = NULL;
         }
-        *start = uid_min;
+        *start = uid_minimum;
 
-        if(uid_max == 0) {
+        if(uid_maximum == 0) {
                 r = parse_env_file(GUMD_CONF_FILE, NEWLINE, "UID_MAX", &c_uid_max, NULL);
                 if (r < 0)
                         return r;
-                uid_max = atoi(c_uid_max);
+                uid_maximum = atoi(c_uid_max);
                 c_uid_max = NULL;
         }
-        *end = uid_max;
+        *end = uid_maximum;
 
         return 0;
 }
