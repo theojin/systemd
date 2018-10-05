@@ -2246,6 +2246,7 @@ static int socket_serialize(Unit *u, FILE *f, FDSet *fds) {
 
         LIST_FOREACH(port, p, s->ports) {
                 int copy;
+                int i;
 
                 if (p->fd < 0)
                         continue;
@@ -2271,10 +2272,18 @@ static int socket_serialize(Unit *u, FILE *f, FDSet *fds) {
                 else if (p->type == SOCKET_MQUEUE)
                         unit_serialize_item_format(u, f, "mqueue", "%i %s", copy, p->path);
                 else if (p->type == SOCKET_USB_FUNCTION)
-                        unit_serialize_item_format(u, f, "ffs", "%i %s", copy, p->path);
+                        unit_serialize_item_format(u, f, "ffs", "%i %i %s", copy, p->n_auxiliary_fds, p->path);
                 else {
                         assert(p->type == SOCKET_FIFO);
                         unit_serialize_item_format(u, f, "fifo", "%i %s", copy, p->path);
+                }
+
+                for (i = 0; i < p->n_auxiliary_fds; ++i) {
+                        copy = fdset_put_dup(fds, p->auxiliary_fds[i]);
+                        if (copy < 0)
+                                return copy;
+
+                        unit_serialize_item_format(u, f, "aux", "%i %i %s", i, copy, p->path);
                 }
         }
 
@@ -2423,11 +2432,11 @@ static int socket_deserialize_item(Unit *u, const char *key, const char *value, 
                 }
 
         } else if (streq(key, "ffs")) {
-                int fd, skip = 0;
+                int fd, skip = 0, n_auxiliary_fds;
                 SocketPort *p;
 
-                if (sscanf(value, "%i %n", &fd, &skip) < 1 || fd < 0 || !fdset_contains(fds, fd))
-                        log_unit_debug(u->id, "Failed to parse ffs value: %s", value);
+                if (sscanf(value, "%i %i %n", &fd, &n_auxiliary_fds, &skip) < 2 || fd < 0 || !fdset_contains(fds, fd))
+                        log_unit_debug(u, "Failed to parse ffs value: %s", value);
                 else {
 
                         LIST_FOREACH(port, p, s->ports)
@@ -2437,7 +2446,31 @@ static int socket_deserialize_item(Unit *u, const char *key, const char *value, 
 
                         if (p) {
                                 safe_close(p->fd);
+                                socket_cleanup_fd_list(p);
                                 p->fd = fdset_remove(fds, fd);
+                                p->n_auxiliary_fds = n_auxiliary_fds;
+                                p->auxiliary_fds = new(int, n_auxiliary_fds);
+                        }
+                }
+
+        } else if (streq(key, "aux")) {
+                int fd, skip = 0, idx;
+                SocketPort *p;
+
+                if (sscanf(value, "%i %i %n", &idx, &fd, &skip) < 2 || fd < 0 || !fdset_contains(fds, fd))
+                        log_unit_debug(u, "Failed to parse ffs value: %s", value);
+                else {
+
+                        LIST_FOREACH(port, p, s->ports)
+                                if (p->type == SOCKET_USB_FUNCTION &&
+                                    path_equal_or_files_same(p->path, value+skip))
+                                        break;
+
+                        if (p) {
+                                if (p->n_auxiliary_fds <= idx)
+                                        log_unit_debug(u->id, "Id of auxiliary fd out of bounds");
+                                else
+                                        p->auxiliary_fds[idx] = fdset_remove(fds, fd);
                         }
                 }
 
