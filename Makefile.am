@@ -516,7 +516,6 @@ dist_systemunit_DATA = \
 	units/var-lib-machines.mount \
 	units/printer.target \
 	units/sound.target \
-	units/bluetooth.target \
 	units/smartcard.target \
 	units/systemd-ask-password-wall.path \
 	units/systemd-ask-password-console.path \
@@ -6300,7 +6299,6 @@ USER_UNIT_ALIASES += \
 	$(systemunitdir)/sockets.target sockets.target \
 	$(systemunitdir)/timers.target timers.target \
 	$(systemunitdir)/paths.target paths.target \
-	$(systemunitdir)/bluetooth.target bluetooth.target \
 	$(systemunitdir)/printer.target printer.target \
 	$(systemunitdir)/sound.target sound.target \
 	$(systemunitdir)/smartcard.target smartcard.target

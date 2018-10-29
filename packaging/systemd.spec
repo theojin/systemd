@@ -505,7 +505,6 @@ fi
 %dir %{_prefix}/lib/systemd/user
 %dir %{_prefix}/lib/systemd/network
 %{_prefix}/lib/systemd/user/basic.target
-%{_prefix}/lib/systemd/user/bluetooth.target
 %{_prefix}/lib/systemd/user/exit.target
 %{_prefix}/lib/systemd/user/printer.target
 %{_prefix}/lib/systemd/user/shutdown.target
