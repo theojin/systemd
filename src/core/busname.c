@@ -17,6 +17,7 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+#include <linux/kdbus.h>
 #include <sys/mman.h>
 
 #include "alloc-util.h"
@@ -28,7 +29,6 @@
 #include "dbus-busname.h"
 #include "fd-util.h"
 #include "formats-util.h"
-#include "kdbus.h"
 #include "parse-util.h"
 #include "process-util.h"
 #include "service.h"
