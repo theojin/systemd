@@ -3218,7 +3218,6 @@ libsystemd_internal_la_SOURCES = \
 	src/libsystemd/sd-bus/bus-slot.c \
 	src/libsystemd/sd-bus/bus-slot.h \
 	src/libsystemd/sd-bus/bus-protocol.h \
-	src/libsystemd/sd-bus/kdbus.h \
 	src/libsystemd/sd-bus/bus-dump.c \
 	src/libsystemd/sd-bus/bus-dump.h \
 	src/libsystemd/sd-utf8/sd-utf8.c \

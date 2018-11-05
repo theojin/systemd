@@ -19,7 +19,8 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include "kdbus.h"
+#include <linux/kdbus.h>
+
 #include "list.h"
 #include "macro.h"
 

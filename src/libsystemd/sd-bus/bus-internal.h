@@ -20,6 +20,7 @@
 ***/
 
 #include <pthread.h>
+#include <linux/kdbus.h>
 #include <sys/socket.h>
 
 #include "sd-bus.h"
@@ -28,7 +29,6 @@
 #include "bus-kernel.h"
 #include "bus-match.h"
 #include "hashmap.h"
-#include "kdbus.h"
 #include "list.h"
 #include "prioq.h"
 #include "refcnt.h"
