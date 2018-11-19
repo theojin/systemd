@@ -32,7 +32,7 @@ TTYVHangup=yes
 KillMode=process
 IgnoreSIGPIPE=no
 SendSIGHUP=yes
-SmackProcessLabel=User::Shell
+SmackProcessLabel=System
 
 [Install]
 WantedBy=getty.target
