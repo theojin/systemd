@@ -433,7 +433,7 @@ static int bus_verify_manage_units_async_full(
                 details[7] = GETTEXT_PACKAGE;
         }
 
-        return bus_verify_polkit_async(call, capability, "org.freedesktop.systemd1.manage-units", details, false, UID_INVALID, &u->manager->polkit_registry, error);
+        return bus_verify_policy_async(call, capability, "org.freedesktop.systemd1.manage-units", details, false, UID_INVALID, u->manager->policy_data, error);
 }
 
 int bus_unit_method_start_generic(
@@ -491,7 +491,7 @@ int bus_unit_method_start_generic(
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         return bus_unit_queue_job(message, u, job_type, mode, reload_if_possible, error);
 }
@@ -563,7 +563,7 @@ int bus_unit_method_kill(sd_bus_message *message, void *userdata, sd_bus_error *
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         r = unit_kill(u, who, signo, error);
         if (r < 0)
@@ -593,7 +593,7 @@ int bus_unit_method_reset_failed(sd_bus_message *message, void *userdata, sd_bus
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         unit_reset_failed(u);
 
@@ -625,7 +625,7 @@ int bus_unit_method_set_properties(sd_bus_message *message, void *userdata, sd_b
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         r = bus_unit_set_properties(u, message, runtime ? UNIT_RUNTIME : UNIT_PERSISTENT, true, error);
         if (r < 0)

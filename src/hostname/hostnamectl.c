@@ -31,7 +31,6 @@
 #include "bus-error.h"
 #include "bus-util.h"
 #include "hostname-util.h"
-#include "spawn-polkit-agent.h"
 #include "util.h"
 
 static bool arg_ask_password = true;
@@ -41,16 +40,16 @@ static bool arg_transient = false;
 static bool arg_pretty = false;
 static bool arg_static = false;
 
-static void polkit_agent_open_if_enabled(void) {
+static void policy_agent_open_if_enabled(void) {
 
-        /* Open the polkit agent as a child process if necessary */
+        /* Open the verification agent as a child process if necessary */
         if (!arg_ask_password)
                 return;
 
         if (arg_transport != BUS_TRANSPORT_LOCAL)
                 return;
 
-        polkit_agent_open();
+        policy_agent_open();
 }
 
 typedef struct StatusInfo {
@@ -234,7 +233,7 @@ static int set_simple_string(sd_bus *bus, const char *method, const char *value)
         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
         int r = 0;
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call_method(
                         bus,

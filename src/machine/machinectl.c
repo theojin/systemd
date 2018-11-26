@@ -53,7 +53,6 @@
 #include "process-util.h"
 #include "ptyfwd.h"
 #include "signal-util.h"
-#include "spawn-polkit-agent.h"
 #include "strv.h"
 #include "terminal-util.h"
 #include "unit-name.h"
@@ -83,9 +82,9 @@ static const char* arg_format = NULL;
 static const char *arg_uid = NULL;
 static char **arg_setenv = NULL;
 
-static void polkit_agent_open_if_enabled(void) {
+static void policy_agent_open_if_enabled(void) {
 
-        /* Open the polkit agent as a child process if necessary */
+        /* Open the policy agent as a child process if necessary */
 
         if (!arg_ask_password)
                 return;
@@ -93,7 +92,7 @@ static void polkit_agent_open_if_enabled(void) {
         if (arg_transport != BUS_TRANSPORT_LOCAL)
                 return;
 
-        polkit_agent_open();
+        policy_agent_open();
 }
 
 static OutputFlags get_output_flags(void) {
@@ -1009,7 +1008,7 @@ static int kill_machine(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         if (!arg_kill_who)
                 arg_kill_who = "all";
@@ -1054,7 +1053,7 @@ static int terminate_machine(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         for (i = 1; i < argc; i++) {
                 r = sd_bus_call_method(
@@ -1086,7 +1085,7 @@ static int copy_files(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         copy_from = streq(argv[0], "copy-from");
         dest = argv[3] ?: argv[2];
@@ -1135,7 +1134,7 @@ static int bind_mount(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call_method(
                         bus,
@@ -1255,7 +1254,7 @@ static int login_machine(int argc, char *argv[], void *userdata) {
                 return -EOPNOTSUPP;
         }
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_event_default(&event);
         if (r < 0)
@@ -1328,7 +1327,7 @@ static int shell_machine(int argc, char *argv[], void *userdata) {
                 }
         }
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_event_default(&event);
         if (r < 0)
@@ -1409,7 +1408,7 @@ static int remove_image(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         for (i = 1; i < argc; i++) {
                 _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -1443,7 +1442,7 @@ static int rename_image(int argc, char *argv[], void *userdata) {
         sd_bus *bus = userdata;
         int r;
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call_method(
                         bus,
@@ -1468,7 +1467,7 @@ static int clone_image(int argc, char *argv[], void *userdata) {
         sd_bus *bus = userdata;
         int r;
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_message_new_method_call(
                         bus,
@@ -1505,7 +1504,7 @@ static int read_only_image(int argc, char *argv[], void *userdata) {
                 }
         }
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call_method(
                         bus,
@@ -1576,7 +1575,7 @@ static int start_machine(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = bus_wait_for_jobs_new(bus, &w);
         if (r < 0)
@@ -1641,7 +1640,7 @@ static int enable_machine(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         method = streq(argv[0], "enable") ? "EnableUnitFiles" : "DisableUnitFiles";
 
@@ -1796,7 +1795,7 @@ static int transfer_image_common(sd_bus *bus, sd_bus_message *m) {
         assert(bus);
         assert(m);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_event_default(&event);
         if (r < 0)
@@ -2343,7 +2342,7 @@ static int cancel_transfer(int argc, char *argv[], void *userdata) {
 
         assert(bus);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         for (i = 1; i < argc; i++) {
                 uint32_t id;
@@ -2866,7 +2865,7 @@ int main(int argc, char*argv[]) {
 finish:
         sd_bus_flush_close_unref(bus);
         pager_close();
-        polkit_agent_close();
+        policy_agent_close();
 
         strv_free(arg_property);
         strv_free(arg_setenv);

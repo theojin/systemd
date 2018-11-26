@@ -97,7 +97,7 @@ struct Manager {
         uint32_t current_transfer_id;
         Hashmap *transfers;
 
-        Hashmap *polkit_registry;
+        PolicyData *policy_data;
 
         int notify_fd;
 
@@ -543,7 +543,7 @@ static Manager *manager_unref(Manager *m) {
 
         hashmap_free(m->transfers);
 
-        bus_verify_polkit_async_registry_free(m->polkit_registry);
+        policy_data_free(m->policy_data);
 
         m->bus = sd_bus_flush_close_unref(m->bus);
         sd_event_unref(m->event);
@@ -685,6 +685,10 @@ static int manager_new(Manager **ret) {
         if (r < 0)
                 return r;
 
+        r = policy_data_new(&m->policy_data);
+        if (r < 0)
+                return r;
+
         *ret = m;
         m = NULL;
 
@@ -720,14 +724,14 @@ static int method_import_tar_or_raw(sd_bus_message *msg, void *userdata, sd_bus_
         assert(msg);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         msg,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.import1.import",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -785,14 +789,14 @@ static int method_export_tar_or_raw(sd_bus_message *msg, void *userdata, sd_bus_
         assert(msg);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         msg,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.import1.export",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -851,14 +855,14 @@ static int method_pull_tar_or_raw(sd_bus_message *msg, void *userdata, sd_bus_er
         assert(msg);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         msg,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.import1.pull",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -969,14 +973,14 @@ static int method_cancel(sd_bus_message *msg, void *userdata, sd_bus_error *erro
         assert(msg);
         assert(t);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         msg,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.import1.pull",
                         NULL,
                         false,
                         UID_INVALID,
-                        &t->manager->polkit_registry,
+                        t->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -999,14 +1003,14 @@ static int method_cancel_transfer(sd_bus_message *msg, void *userdata, sd_bus_er
         assert(msg);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         msg,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.import1.pull",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;

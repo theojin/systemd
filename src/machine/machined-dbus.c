@@ -934,14 +934,14 @@ static int method_clean_pool(sd_bus_message *message, void *userdata, sd_bus_err
         else
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Unknown mode '%s'.", mm);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -1066,14 +1066,14 @@ static int method_set_pool_limit(sd_bus_message *message, void *userdata, sd_bus
         if (!FILE_SIZE_VALID_OR_INFINITY(limit))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "New limit out of range");
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;

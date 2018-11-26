@@ -40,6 +40,7 @@ typedef enum BusTransport {
 } BusTransport;
 
 typedef int (*bus_property_set_t) (sd_bus *bus, const char *member, sd_bus_message *m, sd_bus_error *error, void *userdata);
+typedef struct PolicyData PolicyData;
 
 struct bus_properties_map {
         const char *member;
@@ -61,13 +62,16 @@ typedef bool (*check_idle_t)(void *userdata);
 int bus_event_loop_with_idle(sd_event *e, sd_bus *bus, const char *name, usec_t timeout, check_idle_t check_idle, void *userdata);
 
 int bus_name_has_owner(sd_bus *c, const char *name, sd_bus_error *error);
+int check_good_user(sd_bus_message *m, uid_t good_user);
 
 int bus_check_peercred(sd_bus *c);
 
-int bus_test_polkit(sd_bus_message *call, int capability, const char *action, const char **details, uid_t good_user, bool *_challenge, sd_bus_error *e);
-
-int bus_verify_polkit_async(sd_bus_message *call, int capability, const char *action, const char **details, bool interactive, uid_t good_user, Hashmap **registry, sd_bus_error *error);
-void bus_verify_polkit_async_registry_free(Hashmap *registry);
+int bus_verify_policy(sd_bus_message *call, int capability, const char *action, const char **details, uid_t good_user, PolicyData *policy_data, bool *_challenge, sd_bus_error *e);
+int bus_verify_policy_async(sd_bus_message *call, int capability, const char *action, const char **details, bool interactive, uid_t good_user, PolicyData *policy_data, sd_bus_error *error);
+int policy_data_new(PolicyData **data);
+void policy_data_free(PolicyData *data);
+int policy_agent_open(void);
+void policy_agent_close(void);
 
 int bus_connect_system_systemd(sd_bus **_bus);
 int bus_connect_user_systemd(sd_bus **_bus);

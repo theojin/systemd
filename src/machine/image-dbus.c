@@ -47,14 +47,14 @@ int bus_image_method_remove(
         if (m->n_operations >= OPERATIONS_MAX)
                 return sd_bus_error_setf(error, SD_BUS_ERROR_LIMITS_EXCEEDED, "Too many ongoing operations.");
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-images",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -112,14 +112,14 @@ int bus_image_method_rename(
         if (!image_name_is_valid(new_name))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Image name '%s' is invalid.", new_name);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-images",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -159,14 +159,14 @@ int bus_image_method_clone(
         if (!image_name_is_valid(new_name))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Image name '%s' is invalid.", new_name);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-images",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -219,14 +219,14 @@ int bus_image_method_mark_read_only(
         if (r < 0)
                 return r;
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-images",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -258,14 +258,14 @@ int bus_image_method_set_limit(
         if (!FILE_SIZE_VALID_OR_INFINITY(limit))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "New limit out of range");
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-images",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->polkit_registry,
+                        m->policy_data,
                         error);
         if (r < 0)
                 return r;

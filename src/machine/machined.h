@@ -24,6 +24,7 @@
 #include "sd-bus.h"
 #include "sd-event.h"
 
+#include "bus-util.h"
 #include "hashmap.h"
 #include "list.h"
 
@@ -42,7 +43,7 @@ struct Manager {
         Hashmap *machine_units;
         Hashmap *machine_leaders;
 
-        Hashmap *polkit_registry;
+        PolicyData *policy_data;
 
         Hashmap *image_cache;
         sd_event_source *image_cache_defer_event;

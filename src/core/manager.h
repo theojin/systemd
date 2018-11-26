@@ -26,6 +26,7 @@
 #include "sd-bus.h"
 #include "sd-event.h"
 
+#include "bus-util.h"
 #include "cgroup-util.h"
 #include "fdset.h"
 #include "hashmap.h"
@@ -295,8 +296,8 @@ struct Manager {
         /* Reference to the kdbus bus control fd */
         int kdbus_fd;
 
-        /* Used for processing polkit authorization responses */
-        Hashmap *polkit_registry;
+        /* Used for policy authorization and processing its' responses */
+        PolicyData *policy_data;
 
         /* When the user hits C-A-D more than 7 times per 2s, reboot immediately... */
         RateLimit ctrl_alt_del_ratelimit;

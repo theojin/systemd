@@ -176,14 +176,14 @@ int bus_user_method_terminate(sd_bus_message *message, void *userdata, sd_bus_er
         assert(message);
         assert(u);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_KILL,
                         "org.freedesktop.login1.manage",
                         NULL,
                         false,
                         u->uid,
-                        &u->manager->polkit_registry,
+                        u->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -205,14 +205,14 @@ int bus_user_method_kill(sd_bus_message *message, void *userdata, sd_bus_error *
         assert(message);
         assert(u);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_KILL,
                         "org.freedesktop.login1.manage",
                         NULL,
                         false,
                         u->uid,
-                        &u->manager->polkit_registry,
+                        u->manager->policy_data,
                         error);
         if (r < 0)
                 return r;

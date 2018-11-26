@@ -61,6 +61,12 @@ Manager *manager_new(void) {
 
         sd_event_set_watchdog(m->event, true);
 
+        r = policy_data_new(&m->policy_data);
+        if (r < 0) {
+            manager_free(m);
+            return NULL;
+        }
+
         return m;
 }
 
@@ -89,7 +95,7 @@ void manager_free(Manager *m) {
 
         sd_event_source_unref(m->image_cache_defer_event);
 
-        bus_verify_polkit_async_registry_free(m->polkit_registry);
+        policy_data_free(m->policy_data);
 
         sd_bus_unref(m->bus);
         sd_event_unref(m->event);

@@ -124,14 +124,14 @@ int bus_machine_method_terminate(sd_bus_message *message, void *userdata, sd_bus
         assert(message);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_KILL,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -170,14 +170,14 @@ int bus_machine_method_kill(sd_bus_message *message, void *userdata, sd_bus_erro
         if (!SIGNAL_VALID(signo))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid signal %i", signo);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_KILL,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -490,14 +490,14 @@ int bus_machine_method_open_pty(sd_bus_message *message, void *userdata, sd_bus_
         assert(message);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         m->class == MACHINE_HOST ? "org.freedesktop.machine1.host-open-pty" : "org.freedesktop.machine1.open-pty",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -582,14 +582,14 @@ int bus_machine_method_open_login(sd_bus_message *message, void *userdata, sd_bu
         assert(message);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         m->class == MACHINE_HOST ? "org.freedesktop.machine1.host-login" : "org.freedesktop.machine1.login",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -680,14 +680,14 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
         if (!strv_env_is_valid(env))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid environment assignments");
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         m->class == MACHINE_HOST ? "org.freedesktop.machine1.host-shell" : "org.freedesktop.machine1.shell",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -893,14 +893,14 @@ int bus_machine_method_bind_mount(sd_bus_message *message, void *userdata, sd_bu
         else if (!path_is_absolute(dest) || !path_is_safe(dest))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Destination path must be absolute and not contain ../.");
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -1115,14 +1115,14 @@ int bus_machine_method_copy(sd_bus_message *message, void *userdata, sd_bus_erro
         else if (!path_is_absolute(dest))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Destination path must be absolute.");
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -1225,14 +1225,14 @@ int bus_machine_method_open_root_directory(sd_bus_message *message, void *userda
         assert(message);
         assert(m);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
                         NULL,
                         false,
                         UID_INVALID,
-                        &m->manager->polkit_registry,
+                        m->manager->policy_data,
                         error);
         if (r < 0)
                 return r;

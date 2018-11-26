@@ -56,7 +56,7 @@ enum {
 
 typedef struct Context {
         char *data[_PROP_MAX];
-        Hashmap *polkit_registry;
+        PolicyData *policy_data;
 } Context;
 
 static void context_reset(Context *c) {
@@ -72,7 +72,6 @@ static void context_free(Context *c) {
         assert(c);
 
         context_reset(c);
-        bus_verify_polkit_async_registry_free(c->polkit_registry);
 }
 
 static int context_read_data(Context *c) {
@@ -432,19 +431,20 @@ static int method_set_hostname(sd_bus_message *m, void *userdata, sd_bus_error *
         if (streq_ptr(name, c->data[PROP_HOSTNAME]))
                 return sd_bus_reply_method_return(m, NULL);
 
-        r = bus_verify_polkit_async(
-                        m,
-                        CAP_SYS_ADMIN,
-                        "org.freedesktop.hostname1.set-hostname",
-                        NULL,
-                        interactive,
-                        UID_INVALID,
-                        &c->polkit_registry,
-                        error);
+        r = bus_verify_policy_async(
+                            m,
+                            CAP_SYS_ADMIN,
+                            "org.freedesktop.hostname1.set-hostname",
+                            NULL,
+                            interactive,
+                            UID_INVALID,
+                            c->policy_data,
+                            error);
+
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         h = strdup(name);
         if (!h)
@@ -484,19 +484,19 @@ static int method_set_static_hostname(sd_bus_message *m, void *userdata, sd_bus_
         if (streq_ptr(name, c->data[PROP_STATIC_HOSTNAME]))
                 return sd_bus_reply_method_return(m, NULL);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         m,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.hostname1.set-static-hostname",
                         NULL,
                         interactive,
                         UID_INVALID,
-                        &c->polkit_registry,
+                        c->policy_data,
                         error);
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         if (isempty(name))
                 c->data[PROP_STATIC_HOSTNAME] = mfree(c->data[PROP_STATIC_HOSTNAME]);
@@ -554,19 +554,19 @@ static int set_machine_info(Context *c, sd_bus_message *m, int prop, sd_bus_mess
          * same time as the static one, use the same policy action for
          * both... */
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         m,
                         CAP_SYS_ADMIN,
                         prop == PROP_PRETTY_HOSTNAME ? "org.freedesktop.hostname1.set-static-hostname" : "org.freedesktop.hostname1.set-machine-info",
                         NULL,
                         interactive,
                         UID_INVALID,
-                        &c->polkit_registry,
+                        c->policy_data,
                         error);
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         if (isempty(name))
                 c->data[prop] = mfree(c->data[prop]);
@@ -730,6 +730,12 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
+        r = policy_data_new(&context->policy_data);
+        if (r < 0) {
+                log_error_errno(r, "Failed to init data for privilege checks: %m");
+                goto finish;
+        }
+
         r = bus_event_loop_with_idle(event, bus, "org.freedesktop.hostname1", DEFAULT_EXIT_USEC, NULL, NULL);
         if (r < 0) {
                 log_error_errno(r, "Failed to run event loop: %m");
@@ -737,6 +743,7 @@ int main(int argc, char *argv[]) {
         }
 
 finish:
+        policy_data_free(context.policy_data);
         context_free(&context);
 
         return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;

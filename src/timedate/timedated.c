@@ -52,14 +52,13 @@ typedef struct Context {
         bool local_rtc;
         bool can_ntp;
         bool use_ntp;
-        Hashmap *polkit_registry;
+        PolicyData *policy_data;
 } Context;
 
 static void context_free(Context *c) {
         assert(c);
 
         free(c->zone);
-        bus_verify_polkit_async_registry_free(c->polkit_registry);
 }
 
 static int context_read_data(Context *c) {
@@ -371,19 +370,19 @@ static int method_set_timezone(sd_bus_message *m, void *userdata, sd_bus_error *
         if (streq_ptr(z, c->zone))
                 return sd_bus_reply_method_return(m, NULL);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         m,
                         CAP_SYS_TIME,
                         "org.freedesktop.timedate1.set-timezone",
                         NULL,
                         interactive,
                         UID_INVALID,
-                        &c->polkit_registry,
+                        c->policy_data,
                         error);
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         t = strdup(z);
         if (!t)
@@ -439,14 +438,14 @@ static int method_set_local_rtc(sd_bus_message *m, void *userdata, sd_bus_error 
         if (lrtc == c->local_rtc)
                 return sd_bus_reply_method_return(m, NULL);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         m,
                         CAP_SYS_TIME,
                         "org.freedesktop.timedate1.set-local-rtc",
                         NULL,
                         interactive,
                         UID_INVALID,
-                        &c->polkit_registry,
+                        c->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -555,14 +554,14 @@ static int method_set_time(sd_bus_message *m, void *userdata, sd_bus_error *erro
         } else
                 timespec_store(&ts, (usec_t) utc);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         m,
                         CAP_SYS_TIME,
                         "org.freedesktop.timedate1.set-time",
                         NULL,
                         interactive,
                         UID_INVALID,
-                        &c->polkit_registry,
+                        c->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -614,14 +613,14 @@ static int method_set_ntp(sd_bus_message *m, void *userdata, sd_bus_error *error
         if ((bool)enabled == c->use_ntp)
                 return sd_bus_reply_method_return(m, NULL);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         m,
                         CAP_SYS_TIME,
                         "org.freedesktop.timedate1.set-ntp",
                         NULL,
                         interactive,
                         UID_INVALID,
-                        &c->polkit_registry,
+                        c->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -728,6 +727,12 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
+        r = policy_data_new(&context.policy_data);
+        if (r < 0) {
+                log_error_errno(r, "Failed to initialize data for policy checks: %m");
+                goto finish;
+        }
+
         r = context_read_ntp(&context, bus);
         if (r < 0) {
                 log_error_errno(r, "Failed to determine whether NTP is enabled: %m");
@@ -741,6 +746,7 @@ int main(int argc, char *argv[]) {
         }
 
 finish:
+        policy_data_free(context.policy_data);
         context_free(&context);
 
         return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;

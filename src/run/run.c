@@ -35,7 +35,6 @@
 #include "path-util.h"
 #include "ptyfwd.h"
 #include "signal-util.h"
-#include "spawn-polkit-agent.h"
 #include "strv.h"
 #include "terminal-util.h"
 #include "unit-name.h"
@@ -69,16 +68,16 @@ static const char *arg_on_calendar = NULL;
 static char **arg_timer_property = NULL;
 static bool arg_quiet = false;
 
-static void polkit_agent_open_if_enabled(void) {
+static void policy_agent_open_if_enabled(void) {
 
-        /* Open the polkit agent as a child process if necessary */
+        /* Open the verification agent as a child process if necessary */
         if (!arg_ask_password)
                 return;
 
         if (arg_transport != BUS_TRANSPORT_LOCAL)
                 return;
 
-        polkit_agent_open();
+        policy_agent_open();
 }
 
 static void help(void) {
@@ -848,7 +847,7 @@ static int start_transient_service(
         if (r < 0)
                 return bus_log_create_error(r);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call(bus, m, 0, &error, &reply);
         if (r < 0)
@@ -970,7 +969,7 @@ static int start_transient_scope(
         if (r < 0)
                 return bus_log_create_error(r);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call(bus, m, 0, &error, &reply);
         if (r < 0) {
@@ -1176,7 +1175,7 @@ static int start_transient_timer(
         if (r < 0)
                 return bus_log_create_error(r);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call(bus, m, 0, &error, &reply);
         if (r < 0) {

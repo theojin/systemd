@@ -72,7 +72,7 @@ int bus_job_method_cancel(sd_bus_message *message, void *userdata, sd_bus_error 
                 if (r < 0)
                         return r;
                 if (r == 0)
-                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                        return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
         }
 
         job_finish_and_invalidate(j, JOB_CANCELED, true, false);

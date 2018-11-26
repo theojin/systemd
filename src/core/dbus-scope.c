@@ -45,7 +45,7 @@ static int bus_scope_abandon(sd_bus_message *message, void *userdata, sd_bus_err
         if (r < 0)
                 return r;
         if (r == 0)
-                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
         r = scope_abandon(s);
         if (r == -ESTALE)

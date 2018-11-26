@@ -651,6 +651,10 @@ int manager_new(UnitFileScope scope, bool test_run, Manager **_m) {
         if (r < 0)
                 goto fail;
 
+        r = policy_data_new(&m->policy_data);
+        if (r < 0)
+                goto fail;
+
         m->udev = udev_new();
         if (!m->udev) {
                 r = -ENOMEM;
@@ -662,6 +666,7 @@ int manager_new(UnitFileScope scope, bool test_run, Manager **_m) {
          * have gotten serialized across the reexec. */
 
         m->taint_usr = dir_is_empty("/usr") > 0;
+
 
         *_m = m;
         return 0;
@@ -1071,6 +1076,8 @@ Manager* manager_free(Manager *m) {
 
         assert(hashmap_isempty(m->units_requiring_mounts_for));
         hashmap_free(m->units_requiring_mounts_for);
+
+        policy_data_free(m->policy_data);
 
         free(m);
         return NULL;

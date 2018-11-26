@@ -1055,7 +1055,10 @@ libshared_la_SOURCES = \
 	src/shared/tests.h \
 	src/shared/tests.c \
 	src/shared/fdset.c \
-	src/shared/fdset.h
+	src/shared/fdset.h \
+	src/shared/polkit.h \
+	src/shared/polkit.c
+
 
 if HAVE_UTMP
 libshared_la_SOURCES += \

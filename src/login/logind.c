@@ -108,6 +108,10 @@ static Manager *manager_new(void) {
 
         sd_event_set_watchdog(m->event, true);
 
+        r = policy_data_new(&m->policy_data);
+        if (r < 0)
+                goto fail;
+
         manager_reset_config(m);
 
         return m;
@@ -180,8 +184,6 @@ static void manager_free(Manager *m) {
         if (m->unlink_nologin)
                 (void) unlink("/run/nologin");
 
-        bus_verify_polkit_async_registry_free(m->polkit_registry);
-
         sd_bus_unref(m->bus);
         sd_event_unref(m->event);
 
@@ -189,6 +191,8 @@ static void manager_free(Manager *m) {
 
         strv_free(m->kill_only_users);
         strv_free(m->kill_exclude_users);
+
+        policy_data_free(m->policy_data);
 
         free(m->scheduled_shutdown_type);
         free(m->scheduled_shutdown_tty);

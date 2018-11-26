@@ -205,14 +205,14 @@ int bus_session_method_terminate(sd_bus_message *message, void *userdata, sd_bus
         assert(message);
         assert(s);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_KILL,
                         "org.freedesktop.login1.manage",
                         NULL,
                         false,
                         s->user->uid,
-                        &s->manager->polkit_registry,
+                        s->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -247,14 +247,14 @@ int bus_session_method_lock(sd_bus_message *message, void *userdata, sd_bus_erro
         assert(message);
         assert(s);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.login1.lock-sessions",
                         NULL,
                         false,
                         s->user->uid,
-                        &s->manager->polkit_registry,
+                        s->manager->policy_data,
                         error);
         if (r < 0)
                 return r;
@@ -351,14 +351,14 @@ int bus_session_method_kill(sd_bus_message *message, void *userdata, sd_bus_erro
         if (!SIGNAL_VALID(signo))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid signal %i", signo);
 
-        r = bus_verify_polkit_async(
+        r = bus_verify_policy_async(
                         message,
                         CAP_KILL,
                         "org.freedesktop.login1.manage",
                         NULL,
                         false,
                         s->user->uid,
-                        &s->manager->polkit_registry,
+                        s->manager->policy_data,
                         error);
         if (r < 0)
                 return r;

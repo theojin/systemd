@@ -25,6 +25,7 @@
 #include "sd-bus.h"
 #include "sd-event.h"
 
+#include "bus-util.h"
 #include "hashmap.h"
 #include "list.h"
 #include "set.h"
@@ -126,7 +127,7 @@ struct Manager {
 
         bool remove_ipc;
 
-        Hashmap *polkit_registry;
+        PolicyData *policy_data;
 
         usec_t holdoff_timeout_usec;
         sd_event_source *lid_switch_ignore_event_source;

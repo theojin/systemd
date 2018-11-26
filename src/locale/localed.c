@@ -43,7 +43,7 @@
 #include "strv.h"
 #include "user-util.h"
 
-static Hashmap *polkit_registry = NULL;
+static PolicyData *policy_data = NULL;
 
 static int locale_update_system_manager(Context *c, sd_bus *bus) {
         _cleanup_free_ char **l_unset = NULL;
@@ -291,19 +291,19 @@ static int method_set_locale(sd_bus_message *m, void *userdata, sd_bus_error *er
         if (modified) {
                 _cleanup_strv_free_ char **settings = NULL;
 
-                r = bus_verify_polkit_async(
+                r = bus_verify_policy_async(
                                 m,
                                 CAP_SYS_ADMIN,
                                 "org.freedesktop.locale1.set-locale",
                                 NULL,
                                 interactive,
                                 UID_INVALID,
-                                &polkit_registry,
+                                policy_data,
                                 error);
                 if (r < 0)
                         return r;
                 if (r == 0)
-                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                        return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
                 STRV_FOREACH(i, l)
                         for (p = 0; p < _VARIABLE_LC_MAX; p++) {
@@ -382,19 +382,19 @@ static int method_set_vc_keyboard(sd_bus_message *m, void *userdata, sd_bus_erro
                     (keymap_toggle && (!filename_is_valid(keymap_toggle) || !string_is_safe(keymap_toggle))))
                         return sd_bus_error_set_errnof(error, -EINVAL, "Received invalid keymap data");
 
-                r = bus_verify_polkit_async(
+                r = bus_verify_policy_async(
                                 m,
                                 CAP_SYS_ADMIN,
                                 "org.freedesktop.locale1.set-keyboard",
                                 NULL,
                                 interactive,
                                 UID_INVALID,
-                                &polkit_registry,
+                                policy_data,
                                 error);
                 if (r < 0)
                         return r;
                 if (r == 0)
-                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                        return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
                 if (free_and_strdup(&c->vc_keymap, keymap) < 0 ||
                     free_and_strdup(&c->vc_keymap_toggle, keymap_toggle) < 0)
@@ -558,19 +558,19 @@ static int method_set_x11_keyboard(sd_bus_message *m, void *userdata, sd_bus_err
                     (options && !string_is_safe(options)))
                         return sd_bus_error_set_errnof(error, -EINVAL, "Received invalid keyboard data");
 
-                r = bus_verify_polkit_async(
+                r = bus_verify_policy_async(
                                 m,
                                 CAP_SYS_ADMIN,
                                 "org.freedesktop.locale1.set-keyboard",
                                 NULL,
                                 interactive,
                                 UID_INVALID,
-                                &polkit_registry,
+                                policy_data,
                                 error);
                 if (r < 0)
                         return r;
                 if (r == 0)
-                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
+                        return 1; /* No authorization for now, but the async policy stuff will call us again when it has it */
 
                 r = verify_xkb_rmlvo(model, layout, variant, options);
                 if (r < 0) {
@@ -699,12 +699,16 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
+        r = policy_data_new(&policy_data);
+        if (r < 0)
+            goto finish;
+
         r = bus_event_loop_with_idle(event, bus, "org.freedesktop.locale1", DEFAULT_EXIT_USEC, NULL, NULL);
         if (r < 0)
                 log_error_errno(r, "Failed to run event loop: %m");
 
 finish:
-        bus_verify_polkit_async_registry_free(polkit_registry);
+        policy_data_free(policy_data);
 
         return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }

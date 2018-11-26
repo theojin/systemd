@@ -38,7 +38,6 @@
 #include "parse-util.h"
 #include "process-util.h"
 #include "signal-util.h"
-#include "spawn-polkit-agent.h"
 #include "strv.h"
 #include "sysfs-show.h"
 #include "terminal-util.h"
@@ -61,9 +60,9 @@ static bool arg_ask_password = true;
 static unsigned arg_lines = 10;
 static OutputMode arg_output = OUTPUT_SHORT;
 
-static void polkit_agent_open_if_enabled(void) {
+static void policy_agent_open_if_enabled(void) {
 
-        /* Open the polkit agent as a child process if necessary */
+        /* Open the verification agent as a child process if necessary */
 
         if (!arg_ask_password)
                 return;
@@ -71,7 +70,7 @@ static void polkit_agent_open_if_enabled(void) {
         if (arg_transport != BUS_TRANSPORT_LOCAL)
                 return;
 
-        polkit_agent_open();
+        policy_agent_open();
 }
 
 static OutputFlags get_output_flags(void) {
@@ -1043,7 +1042,7 @@ static int activate(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         if (argc < 2) {
                 /* No argument? Let's convert this into the empty
@@ -1088,7 +1087,7 @@ static int kill_session(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         if (!arg_kill_who)
                 arg_kill_who = "all";
@@ -1122,7 +1121,7 @@ static int enable_linger(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         b = streq(argv[0], "enable-linger");
 
@@ -1170,7 +1169,7 @@ static int terminate_user(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         for (i = 1; i < argc; i++) {
                 uid_t uid;
@@ -1204,7 +1203,7 @@ static int kill_user(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         if (!arg_kill_who)
                 arg_kill_who = "all";
@@ -1241,7 +1240,7 @@ static int attach(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         for (i = 2; i < argc; i++) {
 
@@ -1271,7 +1270,7 @@ static int flush_devices(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call_method(
                         bus,
@@ -1295,7 +1294,7 @@ static int lock_sessions(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         r = sd_bus_call_method(
                         bus,
@@ -1319,7 +1318,7 @@ static int terminate_seat(int argc, char *argv[], void *userdata) {
         assert(bus);
         assert(argv);
 
-        polkit_agent_open_if_enabled();
+        policy_agent_open_if_enabled();
 
         for (i = 1; i < argc; i++) {
 
@@ -1579,7 +1578,7 @@ finish:
         sd_bus_flush_close_unref(bus);
 
         pager_close();
-        polkit_agent_close();
+        policy_agent_close();
 
         strv_free(arg_property);
 
