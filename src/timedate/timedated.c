@@ -727,7 +727,7 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        r = policy_data_new(&context.policy_data);
+        r = policy_data_new(event, &context->policy_data);
         if (r < 0) {
                 log_error_errno(r, "Failed to initialize data for policy checks: %m");
                 goto finish;

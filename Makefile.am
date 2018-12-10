@@ -247,8 +247,11 @@ AM_CPPFLAGS = \
 	-I $(top_srcdir)/src/libsystemd-network \
 	$(OUR_CPPFLAGS)
 
-AM_CFLAGS = $(OUR_CFLAGS)
-AM_LDFLAGS = $(OUR_LDFLAGS)
+AM_CFLAGS = $(OUR_CFLAGS) \
+	$(CYNARA_CFLAGS)
+AM_LDFLAGS = $(OUR_LDFLAGS) \
+	$(CYNARA_CFLAGS) \
+	$(CYNARA_LIBS)
 
 # ------------------------------------------------------------------------------
 define move-to-rootlibdir
@@ -1057,7 +1060,9 @@ libshared_la_SOURCES = \
 	src/shared/fdset.c \
 	src/shared/fdset.h \
 	src/shared/polkit.h \
-	src/shared/polkit.c
+	src/shared/polkit.c \
+	src/shared/cynara.c \
+	src/shared/cynara.h
 
 
 if HAVE_UTMP
@@ -1081,7 +1086,8 @@ libshared_la_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(ACL_CFLAGS) \
 	$(LIBIDN_CFLAGS) \
-	$(SECCOMP_CFLAGS)
+	$(SECCOMP_CFLAGS) \
+	$(CYNARA_CFLAGS)
 
 libshared_la_LIBADD = \
 	libsystemd-internal.la \
@@ -1090,7 +1096,8 @@ libshared_la_LIBADD = \
 	libudev-internal.la \
 	$(ACL_LIBS) \
 	$(LIBIDN_LIBS) \
-	$(SECCOMP_LIBS)
+	$(SECCOMP_LIBS) \
+	$(CYNARA_LIBS)
 
 rootlibexec_LTLIBRARIES += \
 	libsystemd-shared.la

@@ -1397,6 +1397,26 @@ if test "x${journald_kmsg}" != xno; then
 fi
 
 # ------------------------------------------------------------------------------
+have_cynara=no
+AC_ARG_ENABLE(cynara, AS_HELP_STRING([--disable-cynara], [disable usage of cynara in tests]))
+if test "x$enable_cynara" != "xno"; then
+    PKG_CHECK_MODULES([CYNARA], [cynara-client >= 0.4.2 cynara-session >= 0.4.2 cynara-client-async >= 0.4.2 cynara-creds-commons],
+        [AC_DEFINE([HAVE_CYNARA], [1], [Define to enable Cynara privilege checks in systemd])
+         have_cynara=yes],
+        [have_cynara=no])
+    if test "x$have_cynara" = "xno" -a "x$enable_cynara" = "xyes"; then
+            AC_MSG_ERROR([*** cynara support requested but libraries not found])
+    fi
+else
+    CYNARA_CFLAGS=
+    CYNARA_LIBS=
+fi
+
+AC_SUBST([CYNARA_CFLAGS])
+AC_SUBST([CYNARA_LIBS])
+AM_CONDITIONAL(HAVE_CYNARA, [test "$have_cynara" = "yes"])
+
+# ------------------------------------------------------------------------------
 AC_ARG_ENABLE(hibernate,
        [AC_HELP_STRING([--disable-hibernate], [disable hibernation support])],
        enable_hibernate=$enableval, enable_hibernate=yes)
@@ -1650,6 +1670,7 @@ AC_MSG_RESULT([
         Default DNSSEC mode:               ${DEFAULT_DNSSEC_MODE}
         coredump:                          ${have_coredump}
         polkit:                            ${have_polkit}
+        cynara:                            ${have_cynara}
         efi:                               ${have_efi}
         gnuefi:                            ${have_gnuefi}
         efi arch:                          ${EFI_ARCH}

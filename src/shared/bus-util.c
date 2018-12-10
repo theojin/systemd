@@ -39,6 +39,7 @@
 #include "bus-label.h"
 #include "bus-message.h"
 #include "bus-util.h"
+#include "cynara.h"
 #include "def.h"
 #include "escape.h"
 #include "fd-util.h"
@@ -55,11 +56,13 @@
 typedef enum PolicyType {
     NONE,
     POLKIT,
+    CYNARA
 } PolicyType;
 
 typedef struct PolicyData {
     PolicyType policy_type;
     Hashmap *polkit_registry;
+    CynaraData *cynara_data;
 } PolicyData;
 
 static int name_owner_change_callback(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
@@ -262,16 +265,28 @@ int bus_check_peercred(sd_bus *c) {
         return 1;
 }
 
-int policy_data_new(PolicyData **policy_data) {
+int policy_data_new(sd_event *event, PolicyData **policy_data) {
+        int r;
         PolicyData *data;
 
         assert(policy_data);
+        assert(event);
 
         data = new0(PolicyData, 1);
         if (!data)
                 return -ENOMEM;
 
+#ifdef HAVE_CYNARA
+        data->policy_type = CYNARA;
+
+        r = cynara_data_new(event, &data->cynara_data);
+        if (r < 0) {
+                free(data);
+                return r;
+        }
+#else
         data->policy_type = POLKIT;
+#endif
 
         *policy_data = data;
         return 0;
@@ -280,6 +295,8 @@ int policy_data_new(PolicyData **policy_data) {
 void policy_data_free(PolicyData *data) {
         if (data->policy_type == POLKIT) {
                 polkit_registry_free(data->polkit_registry);
+        } else if (data->policy_type == CYNARA) {
+                cynara_data_free(data->cynara_data);
         }
 
         free(data);
@@ -313,6 +330,8 @@ int bus_verify_policy(
 
         if (policy_data->policy_type == POLKIT)
                 return bus_test_polkit(call, action, details, _challenge, e);
+        else if (policy_data->policy_type == CYNARA)
+                return bus_verify_cynara(call, policy_data->cynara_data);
 
         return -EACCES;
 }
@@ -321,6 +340,8 @@ int bus_verify_policy_async(sd_bus_message *call, int capability, const char *ac
 {
         if (policy_data->policy_type == POLKIT)
                 return bus_verify_polkit_async(call, capability, action, details, interactive, good_user, &policy_data->polkit_registry, error);
+        else if (policy_data->policy_type == CYNARA)
+                return bus_verify_cynara_async(call, capability, policy_data->cynara_data);
 
         return -EACCES;
 }

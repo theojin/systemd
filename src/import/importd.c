@@ -685,7 +685,7 @@ static int manager_new(Manager **ret) {
         if (r < 0)
                 return r;
 
-        r = policy_data_new(&m->policy_data);
+        r = policy_data_new(m->event, &m->policy_data);
         if (r < 0)
                 return r;
 

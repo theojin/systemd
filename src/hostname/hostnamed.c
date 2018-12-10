@@ -74,7 +74,7 @@ static void context_free(Context *c) {
         context_reset(c);
 }
 
-static int context_read_data(Context *c) {
+static int context_read_data(sd_event *event, Context *c) {
         int r;
         struct utsname u;
 
@@ -724,13 +724,13 @@ int main(int argc, char *argv[]) {
         if (r < 0)
                 goto finish;
 
-        r = context_read_data(&context);
+        r = context_read_data(event, &context);
         if (r < 0) {
                 log_error_errno(r, "Failed to read hostname and machine information: %m");
                 goto finish;
         }
 
-        r = policy_data_new(&context->policy_data);
+        r = policy_data_new(event, &context->policy_data);
         if (r < 0) {
                 log_error_errno(r, "Failed to init data for privilege checks: %m");
                 goto finish;

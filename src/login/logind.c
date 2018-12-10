@@ -108,7 +108,7 @@ static Manager *manager_new(void) {
 
         sd_event_set_watchdog(m->event, true);
 
-        r = policy_data_new(&m->policy_data);
+        r = policy_data_new(m->event, &m->policy_data);
         if (r < 0)
                 goto fail;
 

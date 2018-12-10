@@ -699,7 +699,7 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        r = policy_data_new(&policy_data);
+        r = policy_data_new(event, &policy_data);
         if (r < 0)
             goto finish;
 

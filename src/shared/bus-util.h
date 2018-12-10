@@ -68,7 +68,7 @@ int bus_check_peercred(sd_bus *c);
 
 int bus_verify_policy(sd_bus_message *call, int capability, const char *action, const char **details, uid_t good_user, PolicyData *policy_data, bool *_challenge, sd_bus_error *e);
 int bus_verify_policy_async(sd_bus_message *call, int capability, const char *action, const char **details, bool interactive, uid_t good_user, PolicyData *policy_data, sd_bus_error *error);
-int policy_data_new(PolicyData **data);
+int policy_data_new(sd_event *event, PolicyData **policy_data);
 void policy_data_free(PolicyData *data);
 int policy_agent_open(void);
 void policy_agent_close(void);

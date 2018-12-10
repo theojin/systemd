@@ -12,6 +12,7 @@
 %define WITH_MACHINED 0
 %define WITH_DOC 0
 %define WITH_HOSTNAMED 0
+%define WITH_CYNARA 1
 
 Name:           systemd
 Version:        231
@@ -36,6 +37,12 @@ BuildRequires:  libkmod-devel >= 14
 %if %{?WITH_DOC}
 BuildRequires:  xsltproc
 BuildRequires:  docbook-xsl-stylesheets
+%endif
+%if %{?WITH_CYNARA}
+BuildRequires:  pkgconfig(cynara-client)
+BuildRequires:  pkgconfig(cynara-client-async)
+BuildRequires:  pkgconfig(cynara-creds-commons)
+BuildRequires:  pkgconfig(cynara-session)
 %endif
 BuildRequires:  pam-devel
 BuildRequires:  pkgconfig
@@ -165,6 +172,9 @@ cp %{SOURCE3} .
         --docdir=%{_docdir}/systemd \
 %if ! %{?WITH_DOC}
         --disable-manpages \
+%endif
+%if ! %{?WITH_CYNARA}
+        --disable-cynara \
 %endif
         --disable-static \
         --with-rpmmacrosdir=%{_sysconfdir}/rpm/ \

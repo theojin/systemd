@@ -651,7 +651,7 @@ int manager_new(UnitFileScope scope, bool test_run, Manager **_m) {
         if (r < 0)
                 goto fail;
 
-        r = policy_data_new(&m->policy_data);
+        r = policy_data_new(m->event, &m->policy_data);
         if (r < 0)
                 goto fail;
 
