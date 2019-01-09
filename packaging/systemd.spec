@@ -50,6 +50,8 @@ Requires(post): coreutils
 Requires(pre):  coreutils
 Requires(pre):  /usr/bin/getent
 Requires(pre):  /usr/sbin/groupadd
+Requires(post): %{_sbindir}/update-alternatives
+Requires(preun): %{_sbindir}/update-alternatives
 
 Obsoletes:      SysVinit < 2.86-24
 Obsoletes:      sysvinit < 2.86-24
@@ -259,6 +261,9 @@ install -m 755 -d %{buildroot}/%{_prefix}/lib/systemd/system
 
 rm -rf %{buildroot}/%{_docdir}/%{name}
 
+# Allow replacing systemd-shutdown with tizen-specific variant
+mv %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown-original
+
 # Disable some useless services in Tizen
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/dev-hugepages.mount
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/sys-fs-fuse-connections.mount
@@ -383,6 +388,18 @@ if [ $1 -eq 0 ] ; then
                 remote-fs.target \
                 systemd-readahead-replay.service \
                 systemd-readahead-collect.service >/dev/null 2>&1 || :
+
+        update-alternatives --remove %{_prefix}/lib/systemd/systemd-shutdown systemd-shutdown %{_prefix}/lib/systemd/systemd-shutdown-original
+fi
+
+%posttrans
+# Update alternatives after the whole transaction is completed - this is
+# necessary due to RPM ordering, which removes files from old package not
+# provided by new package after regular post scripts are run.  Please refer
+# to following guideliness for explanation:
+#   https://fedoraproject.org/wiki/Packaging:Scriptlets#Ordering
+if [ $1 -eq 0 ]; then
+    update-alternatives --install %{_prefix}/lib/systemd/systemd-shutdown systemd-shutdown %{_prefix}/lib/systemd/systemd-shutdown-original 100 || :
 fi
 
 %post -n libsystemd -p /sbin/ldconfig
