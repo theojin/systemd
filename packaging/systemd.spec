@@ -50,6 +50,8 @@ Requires(post): coreutils
 Requires(pre):  coreutils
 Requires(pre):  /usr/bin/getent
 Requires(pre):  /usr/sbin/groupadd
+Requires(post): %{_sbindir}/update-alternatives
+Requires(preun): %{_sbindir}/update-alternatives
 
 Obsoletes:      SysVinit < 2.86-24
 Obsoletes:      sysvinit < 2.86-24
@@ -259,6 +261,9 @@ install -m 755 -d %{buildroot}/%{_prefix}/lib/systemd/system
 
 rm -rf %{buildroot}/%{_docdir}/%{name}
 
+# Allow replacing systemd-shutdown with tizen-specific variant
+mv %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown %{buildroot}%{_prefix}/lib/systemd/systemd-shutdown-original
+
 # Disable some useless services in Tizen
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/dev-hugepages.mount
 rm -rf %{buildroot}/%{_prefix}/lib/systemd/system/sysinit.target.wants/sys-fs-fuse-connections.mount
@@ -311,11 +316,17 @@ ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
 /usr/bin/mv -n %{_sysconfdir}/systemd/systemd-logind.conf %{_sysconfdir}/systemd/logind.conf >/dev/null 2>&1 || :
 /usr/bin/mv -n %{_sysconfdir}/systemd/systemd-journald.conf %{_sysconfdir}/systemd/journald.conf >/dev/null 2>&1 || :
 
+# Migrate systemd-shutdown to alternatives mechanism
+test -L /usr/lib/systemd/systemd-shutdown || rm -f /usr/lib/systemd/systemd-shutdown || :
+
 %post
 /usr/bin/systemd-machine-id-setup > /dev/null 2>&1 || :
 %if %{WITH_RANDOMSEED}
 /usr/lib/systemd/systemd-random-seed save > /dev/null 2>&1 || :
 %endif
+
+update-alternatives --install %{_libdir}/systemd/systemd-shutdown systemd-shutdown %{_libdir}/systemd/systemd-shutdown-original 100
+
 /usr/bin/systemctl daemon-reexec > /dev/null 2>&1 || :
 /usr/bin/systemctl start systemd-udevd.service >/dev/null 2>&1 || :
 /usr/bin/mkdir -p /etc/systemd/network
@@ -384,6 +395,7 @@ if [ $1 -eq 0 ] ; then
                 systemd-readahead-replay.service \
                 systemd-readahead-collect.service >/dev/null 2>&1 || :
 fi
+update-alternatives --remove %{_libdir}/systemd/systemd-shutdown systemd-shutdown %{_libdir}/systemd/systemd-shutdown-original
 
 %post -n libsystemd -p /sbin/ldconfig
 %postun -n libsystemd  -p /sbin/ldconfig
