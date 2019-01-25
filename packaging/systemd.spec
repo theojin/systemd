@@ -389,7 +389,7 @@ if [ $1 -eq 0 ] ; then
                 systemd-readahead-replay.service \
                 systemd-readahead-collect.service >/dev/null 2>&1 || :
 
-        update-alternatives --remove %{_prefix}/lib/systemd/systemd-shutdown systemd-shutdown %{_prefix}/lib/systemd/systemd-shutdown-original
+        update-alternatives --remove systemd-shutdown %{_prefix}/lib/systemd/systemd-shutdown-original
 fi
 
 %posttrans
