@@ -328,14 +328,14 @@ ln -sf ./libsystemd.pc %{buildroot}%{_libdir}/pkgconfig/libsystemd-login.pc
 
 # link system, user unit directory in conf dir to opt conf dir
 /usr/bin/mkdir -p /opt/etc/systemd
-/usr/bin/mv /etc/systemd/system /opt/etc/systemd/system 
+/usr/bin/mv /etc/systemd/system /opt/etc/systemd/system
 /usr/bin/mv /etc/systemd/user /opt/etc/systemd/user
 /usr/bin/ln -s ../../opt/etc/systemd/system /etc/systemd/system
 /usr/bin/ln -s ../../opt/etc/systemd/user /etc/systemd/user
 
 # Set the smack label of executable binary tools
 chsmack %{_bindir}/bootctl -a "System::Tools"
-chsmack %{_bindir}/busctl -a "System::Tools"
+chsmack %{_bindir}/busctl -a "System::Tools" -e "System"
 chsmack %{_bindir}/kernel-install -a "System::Tools"
 %if %{?WITH_MACHINED}
 chsmack %{_bindir}/machinectl -a "System::Tools"
